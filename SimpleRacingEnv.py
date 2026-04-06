@@ -4,9 +4,6 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-# Checks if environment follows Stable Baseline 3 interface
-from stable_baselines3.common.env_checker import check_env
-
 class SimpleRacingEnv(gym.Env):
     """Custom racing environment that follows gym interface."""
 
@@ -159,7 +156,8 @@ class SimpleRacingEnv(gym.Env):
             (self.track_center_x, self.track_center_y),
             self.track_radius,
             fill=False,
-            linestyle="--"
+            linestyle="--",
+            color='g',
         )
 
         self.ax.add_patch(outer)
