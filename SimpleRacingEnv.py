@@ -63,7 +63,7 @@ class SimpleRacingEnv(gym.Env):
         if action == 1: # Accelerate
             self.velocity += self.acceleration_amount
         if action == 2: # Brake
-            self.velocity -= self.acceleration_amount
+            self.velocity -= self.brake_amount
         if action == 3: # Turn left
             self.direction += self.turn_amount
         if action == 4: # Turn right
