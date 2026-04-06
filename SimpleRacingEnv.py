@@ -7,8 +7,11 @@ import matplotlib.pyplot as plt
 class SimpleRacingEnv(gym.Env):
     """Custom racing environment that follows gym interface."""
 
-    def __init__(self):
+    metadata = {"render_modes": ["human"], "render_fps": 30}
+
+    def __init__(self, render_mode=None):
         super().__init__()
+        self.render_mode = render_mode
 
         """
         0 - do nothing
@@ -110,6 +113,10 @@ class SimpleRacingEnv(gym.Env):
             truncated = True
 
         info = {}
+
+        if self.render_mode == "human":
+            self.render()
+
         return observation, reward, terminated, truncated, info
 
     def reset(self, seed=None, options=None):
