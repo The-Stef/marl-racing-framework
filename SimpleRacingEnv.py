@@ -9,7 +9,7 @@ class SimpleRacingEnv(gym.Env):
 
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, alpha=1.0, beta=0.0):
         super().__init__()
         self.render_mode = render_mode
 
@@ -39,6 +39,13 @@ class SimpleRacingEnv(gym.Env):
 
         self.fig = None
         self.ax = None
+
+        self.prev_x = None
+        self.prev_y = None
+        self.finished_lap = False
+
+        self.alpha = alpha
+        self.beta = beta
 
         # To avoid magic numbers later down the road, define some hyperparameters
         self.track_center_x = 0.0
@@ -81,9 +88,19 @@ class SimpleRacingEnv(gym.Env):
         elif self.direction < -np.pi:
             self.direction += 2 * np.pi
 
+        # Store old position
+        self.prev_x = self.x
+        self.prev_y = self.y
+
         # Move agent
         self.x += self.velocity * np.cos(self.direction) * self.dt
         self.y += self.velocity * np.sin(self.direction) * self.dt
+
+        near_start_x = abs(self.x + 10) < 1.0
+        crossed_y = self.prev_y < 0 <= self.y
+
+        if self.steps > 50 and near_start_x and crossed_y:
+            self.finished_lap = True
 
         # Recompute radial error
         distance_from_center = np.sqrt(
@@ -97,16 +114,21 @@ class SimpleRacingEnv(gym.Env):
             dtype=np.float32
         )
 
-        reward = self.velocity - 0.5 * abs(self.radial_error)
+        dense_reward = self.velocity - 0.5 * abs(self.radial_error)
+        sparse_reward = 100.0 if self.finished_lap else 0.0
+
+        reward = self.alpha * dense_reward + self.beta * sparse_reward
 
         # Termination logic
         terminated = False
         truncated = False
 
-        # No termination for making a lap at the moment
         # Model
         if abs(self.radial_error) > self.track_half_width:
             reward -= 5.0
+            terminated = True
+
+        if self.finished_lap:
             terminated = True
 
         if self.steps >= self.max_steps:
@@ -134,6 +156,10 @@ class SimpleRacingEnv(gym.Env):
 
         self.steps = 0
 
+        self.prev_x = self.x
+        self.prev_y = self.y
+        self.finished_lap = False
+
         observation = np.array(
             [self.x, self.y, self.velocity, self.direction, self.radial_error],
             dtype=np.float32
@@ -147,6 +173,9 @@ class SimpleRacingEnv(gym.Env):
             self.fig, self.ax = plt.subplots()
 
         self.ax.clear()
+
+        # Draw finish line
+        self.ax.plot([-10, -10], [-1, 1], color="red", linewidth=2)
 
         # draw ideal track circle
         outer = plt.Circle(
