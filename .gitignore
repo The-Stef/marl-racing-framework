@@ -4,4 +4,4 @@ __pycache__/
 .env
 venv/
 powerpoints/
-ppo_basic.zip
+artifacts/
