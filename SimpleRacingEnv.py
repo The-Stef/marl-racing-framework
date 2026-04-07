@@ -175,7 +175,7 @@ class SimpleRacingEnv(gym.Env):
         self.ax.clear()
 
         # Draw finish line
-        self.ax.plot([-10, -10], [-1, 1], color="red", linewidth=2)
+        self.ax.plot([-12, -8], [0, 0], color="red", linewidth=2)
 
         # draw ideal track circle
         outer = plt.Circle(
