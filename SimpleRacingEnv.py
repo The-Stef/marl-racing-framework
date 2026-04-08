@@ -145,10 +145,14 @@ class SimpleRacingEnv(gym.Env):
         """Set the initial state of the environment."""
         super().reset(seed=seed)
 
-        self.x = -10
-        self.y = 0
+        base_x = -10
+        base_y = 0
+        base_direction = np.pi / 2
+
+        self.x = base_x + self.np_random.uniform(-0.3, 0.3)
+        self.y = base_y + self.np_random.uniform(-0.3, 0.3)
         self.velocity = 0
-        self.direction = np.pi / 2
+        self.direction = base_direction + self.np_random.uniform(-0.3, 0.3)
 
         # Compute radial error
         distance_from_center = np.sqrt((self.track_center_x - self.x) ** 2 + (self.track_center_y - self.y) ** 2)

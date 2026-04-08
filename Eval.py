@@ -3,14 +3,14 @@ from SimpleRacingEnv import SimpleRacingEnv
 import numpy as np
 
 # Variables for easy value switching
-MODEL_DISPLAY_NAME = "SPARSE MODEL"
+MODEL_DISPLAY_NAME = "(sparse | 20eps | non-deterministic env | non-deterministic policy)"
 SPARSE_PATH = "artifacts/models/simplecircle_ppo_sparse_500k_run1"
 DENSE_PATH = "artifacts/models/simplecircle_ppo_dense_100k_run1"
-PATH = DENSE_PATH
+PATH = SPARSE_PATH
 RENDER_MODE = "human"
 N_EPISODES = 20
-ALPHA = 1.0
-BETA = 0.0
+ALPHA = 0.0
+BETA = 1.0
 
 env = SimpleRacingEnv(render_mode=RENDER_MODE, alpha=ALPHA, beta=BETA)
 model = PPO.load(PATH, env=env)
