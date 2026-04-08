@@ -96,6 +96,7 @@ class SimpleRacingEnv(gym.Env):
         self.x += self.velocity * np.cos(self.direction) * self.dt
         self.y += self.velocity * np.sin(self.direction) * self.dt
 
+        # Finished lap logic
         near_start_x = abs(self.x + 10) < 1.0
         crossed_y = self.prev_y < 0 <= self.y
 
