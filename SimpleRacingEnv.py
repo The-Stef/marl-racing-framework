@@ -63,13 +63,7 @@ class SimpleRacingEnv(gym.Env):
         super().__init__()
         self.render_mode = render_mode
 
-        """
-        0 - do nothing
-        1 - accelerate
-        2 - brake
-        3 - turn left
-        4 - turn right
-        """
+        # 0 - do nothing | 1 - accelerate |2 - brake | 3 - turn left | 4 - turn right
         self.action_space = spaces.Discrete(5)
 
         # Observable state
