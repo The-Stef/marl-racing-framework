@@ -1,13 +1,63 @@
-import gymnasium as gym
+import matplotlib.pyplot as plt
 from gymnasium import spaces
+import gymnasium as gym
 import numpy as np
 
-import matplotlib.pyplot as plt
 
 class SimpleRacingEnv(gym.Env):
     """Custom racing environment that follows gym interface."""
 
     metadata = {"render_modes": ["human"], "render_fps": 30}
+
+    def _get_observation(self):
+        return np.array(
+            [self.x, self.y, self.velocity, self.direction, self.radial_error],
+            dtype=np.float32
+        )
+
+    def _compute_radial_error(self):
+        distance_from_center = np.sqrt(
+            (self.track_center_x - self.x) ** 2 +
+            (self.track_center_y - self.y) ** 2
+        )
+        return distance_from_center - self.track_radius
+
+    def _apply_action(self, action):
+        if action == 1:  # accelerate
+            self.velocity += self.acceleration_amount
+        elif action == 2:  # brake
+            self.velocity -= self.brake_amount
+        elif action == 3:  # turn left
+            self.direction += self.turn_amount
+        elif action == 4:  # turn right
+            self.direction -= self.turn_amount
+
+        self.velocity = np.clip(self.velocity, 0.0, self.max_velocity)
+
+    def _wrap_direction(self):
+        if self.direction > np.pi:
+            self.direction -= 2 * np.pi
+        elif self.direction < -np.pi:
+            self.direction += 2 * np.pi
+
+    def _move_agent(self):
+        self.x += self.velocity * np.cos(self.direction) * self.dt
+        self.y += self.velocity * np.sin(self.direction) * self.dt
+
+    def _compute_reward(self):
+        dense_reward = self.velocity - 0.5 * abs(self.radial_error)
+        sparse_reward = 100.0 if self.finished_lap else 0.0
+        reward = self.alpha * dense_reward + self.beta * sparse_reward
+
+        if abs(self.radial_error) > self.track_half_width:
+            reward -= 5.0
+
+        return reward
+
+    def _check_lap_completion(self):
+        near_start_x = abs(self.x - self.start_x) < 1.0
+        crossed_y = self.prev_y < self.finish_line_y <= self.y
+        return self.steps > 50 and near_start_x and crossed_y
 
     def __init__(self, render_mode=None, alpha=1.0, beta=0.0):
         super().__init__()
@@ -22,13 +72,7 @@ class SimpleRacingEnv(gym.Env):
         """
         self.action_space = spaces.Discrete(5)
 
-        """ Observable actions:
-        x - position on x axis
-        y - position on y axis
-        velocity - speed in given direction
-        direction - direction of agent
-        radial_error - distance from ideal track
-        """
+        # Observable state
         self.x = None
         self.y = None
         self.velocity = None
@@ -47,18 +91,28 @@ class SimpleRacingEnv(gym.Env):
         self.alpha = alpha
         self.beta = beta
 
-        # To avoid magic numbers later down the road, define some hyperparameters
+        # Track parameters
         self.track_center_x = 0.0
         self.track_center_y = 0.0
         self.track_radius = 10.0
+        self.track_half_width = 2.0
 
+        # Physics parameters
         self.acceleration_amount = 0.2
         self.brake_amount = 0.2
         self.turn_amount = np.pi / 18  # 10 degrees
         self.max_velocity = 5.0
         self.dt = 0.2
-        self.track_half_width = 2.0
         self.max_steps = 500
+
+        # Start / finish parameters
+        self.start_x = -10.0
+        self.start_y = 0.0
+        self.start_direction = np.pi / 2
+
+        self.finish_line_x_min = -12.0
+        self.finish_line_x_max = -8.0
+        self.finish_line_y = 0.0
 
         self.observation_space = spaces.Box(
             low=np.array([-20, -20, 0, -np.pi, -10], dtype=np.float32),
@@ -70,63 +124,24 @@ class SimpleRacingEnv(gym.Env):
     def step(self, action):
         self.steps += 1
 
-        if action == 1: # Accelerate
-            self.velocity += self.acceleration_amount
-        if action == 2: # Brake
-            self.velocity -= self.brake_amount
-        if action == 3: # Turn left
-            self.direction += self.turn_amount
-        if action == 4: # Turn right
-            self.direction -= self.turn_amount
+        self._apply_action(action)
+        self._wrap_direction()
 
-        # Keep velocity in range [0, max_velocity]
-        self.velocity = np.clip(self.velocity, 0.0, self.max_velocity)
-
-        # Keep direction in range [-pi, pi]
-        if self.direction > np.pi:
-            self.direction -= 2 * np.pi
-        elif self.direction < -np.pi:
-            self.direction += 2 * np.pi
-
-        # Store old position
         self.prev_x = self.x
         self.prev_y = self.y
 
-        # Move agent
-        self.x += self.velocity * np.cos(self.direction) * self.dt
-        self.y += self.velocity * np.sin(self.direction) * self.dt
+        self._move_agent()
 
-        # Finished lap logic
-        near_start_x = abs(self.x + 10) < 1.0
-        crossed_y = self.prev_y < 0 <= self.y
+        self.finished_lap = self._check_lap_completion()
+        self.radial_error = self._compute_radial_error()
 
-        if self.steps > 50 and near_start_x and crossed_y:
-            self.finished_lap = True
+        observation = self._get_observation()
+        reward = self._compute_reward()
 
-        # Recompute radial error
-        distance_from_center = np.sqrt(
-            (self.track_center_x - self.x) ** 2 +
-            (self.track_center_y - self.y) ** 2
-        )
-        self.radial_error = distance_from_center - self.track_radius
-
-        observation = np.array(
-            [self.x, self.y, self.velocity, self.direction, self.radial_error],
-            dtype=np.float32
-        )
-
-        dense_reward = self.velocity - 0.5 * abs(self.radial_error)
-        sparse_reward = 100.0 if self.finished_lap else 0.0
-
-        reward = self.alpha * dense_reward + self.beta * sparse_reward
-
-        # Termination logic
         terminated = False
         truncated = False
 
-        # Model
         if abs(self.radial_error) > self.track_half_width:
-            reward -= 5.0
             terminated = True
 
         if self.finished_lap:
@@ -135,43 +150,31 @@ class SimpleRacingEnv(gym.Env):
         if self.steps >= self.max_steps:
             truncated = True
 
-        info = {}
-
         if self.render_mode == "human":
             self.render()
 
-        return observation, reward, terminated, truncated, info
+        return observation, reward, terminated, truncated, {}
 
     def reset(self, seed=None, options=None):
-        """Set the initial state of the environment."""
         super().reset(seed=seed)
 
-        base_x = -10
-        base_y = 0
-        base_direction = np.pi / 2
+        base_x = self.start_x
+        base_y = self.start_y
+        base_direction = self.start_direction
 
         self.x = base_x + self.np_random.uniform(-0.3, 0.3)
         self.y = base_y + self.np_random.uniform(-0.3, 0.3)
-        self.velocity = 0
+        self.velocity = 0.0
         self.direction = base_direction + self.np_random.uniform(-0.3, 0.3)
 
-        # Compute radial error
-        distance_from_center = np.sqrt((self.track_center_x - self.x) ** 2 + (self.track_center_y - self.y) ** 2)
-        self.radial_error = distance_from_center - self.track_radius
-
         self.steps = 0
-
         self.prev_x = self.x
         self.prev_y = self.y
         self.finished_lap = False
 
-        observation = np.array(
-            [self.x, self.y, self.velocity, self.direction, self.radial_error],
-            dtype=np.float32
-        )
-        info = {} # Used for supplementary diagnostic information (later for debugging?)
+        self.radial_error = self._compute_radial_error()
 
-        return observation, info
+        return self._get_observation(), {}
 
     def render(self):
         if self.fig is None or self.ax is None:
@@ -180,9 +183,14 @@ class SimpleRacingEnv(gym.Env):
         self.ax.clear()
 
         # Draw finish line
-        self.ax.plot([-12, -8], [0, 0], color="red", linewidth=2)
+        self.ax.plot(
+            [self.finish_line_x_min, self.finish_line_x_max],
+            [self.finish_line_y, self.finish_line_y],
+            color="red",
+            linewidth=2
+        )
 
-        # draw ideal track circle
+        # Draw ideal track circle
         outer = plt.Circle(
             (self.track_center_x, self.track_center_y),
             self.track_radius + self.track_half_width,
@@ -198,23 +206,23 @@ class SimpleRacingEnv(gym.Env):
             self.track_radius,
             fill=False,
             linestyle="--",
-            color='g',
+            color="g",
         )
 
         self.ax.add_patch(outer)
         self.ax.add_patch(inner)
         self.ax.add_patch(ideal)
 
-        # draw agent
+        # Draw agent
         self.ax.plot(self.x, self.y, "o")
 
-        # draw direction arrow
+        # Draw direction arrow
         arrow_length = 1.5
         dx = arrow_length * np.cos(self.direction)
         dy = arrow_length * np.sin(self.direction)
         self.ax.arrow(self.x, self.y, dx, dy, head_width=0.4)
 
-        # set limits and aspect
+        # Set limits and aspect
         self.ax.set_xlim(-15, 15)
         self.ax.set_ylim(-15, 15)
         self.ax.set_aspect("equal")
