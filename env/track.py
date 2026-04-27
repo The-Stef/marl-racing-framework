@@ -1,15 +1,12 @@
 import numpy as np
 
-
 def wrap_angle(angle):
     """Wrap angle in [-pi, pi]."""
     return (angle + np.pi) % (2 * np.pi) - np.pi
 
-
 def car_heading(env):
     """Return the car's real forward heading."""
     return wrap_angle(float(env.CAR.hull.angle) + np.pi / 2)
-
 
 def compute_radial_error(env):
     """Compute signed distance from the ideal circular centerline."""
@@ -18,7 +15,6 @@ def compute_radial_error(env):
         (env.TRACK_CENTER_Y - env.CAR.hull.position[1]) ** 2
     )
     return distance_from_center - env.TRACK_RADIUS
-
 
 def compute_desired_direction(env):
     """Return the tangent direction angle the car should follow."""
@@ -30,7 +26,6 @@ def compute_desired_direction(env):
     ty = -rx
 
     return np.arctan2(ty, tx)
-
 
 def tangential_velocity(env):
     """Project car velocity onto the clockwise tangent direction."""
@@ -46,7 +41,6 @@ def tangential_velocity(env):
     vy = env.CAR.hull.linearVelocity[1]
 
     return vx * tx + vy * ty
-
 
 def current_tile(env):
     """Return current angular tile index around the circular track."""

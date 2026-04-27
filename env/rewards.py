@@ -1,7 +1,6 @@
 import numpy as np
 from configs import default as cfg
 
-
 def compute_reward(env):
     """Compute reward for the current environment state."""
     radial_error = env._compute_radial_error()
