@@ -21,7 +21,7 @@ def compute_desired_direction(env):
     rx = env.CAR.hull.position[0] - env.TRACK_CENTER_X
     ry = env.CAR.hull.position[1] - env.TRACK_CENTER_Y
 
-    # Clockwise tangent
+    # Clockwise tangent, center-to-car position rotated by 90 degrees to right
     tx = ry
     ty = -rx
 
@@ -44,13 +44,16 @@ def tangential_velocity(env):
 
 def current_tile(env):
     """Return current angular tile index around the circular track."""
+
+    # Get car position as an angle relative to center of track
     theta = np.arctan2(
         env.CAR.hull.position[1] - env.TRACK_CENTER_Y,
         env.CAR.hull.position[0] - env.TRACK_CENTER_X
     )
 
-    # Convert [-pi, pi] to [0, 2pi]
+    # Convert angular position [-pi, pi] to [0, 2pi]
     theta = (theta + 2 * np.pi) % (2 * np.pi)
 
+    # Map position to specific tile
     tile = int(theta / (2 * np.pi) * env.NUM_TILES)
     return tile
