@@ -4,7 +4,8 @@ from stable_baselines3.common.monitor import Monitor
 
 from env.SimpleRacingEnv import SimpleRacingEnv
 
-NAME = "newenv_sac_tiles_100k_action_repeat_2"
+SEED = 42
+run_name = datetime.now().strftime("sac_ar2_%Y%m%d_%H%M%S")
 
 def main():
     env = Monitor(SimpleRacingEnv())
