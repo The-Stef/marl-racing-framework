@@ -5,8 +5,11 @@ from stable_baselines3.common.logger import configure
 from env.SimpleRacingEnv import SimpleRacingEnv
 from datetime import datetime
 
+from callbacks.logger import LoggerCallback
+
 SEED = 42
-run_name = datetime.now().strftime("sac_ar2_%Y%m%d_%H%M%S")
+NAME = "the_testt"
+run_name = datetime.now().strftime(f"{NAME}_%Y%m%d_%H%M%S")
 
 def main():
     env = Monitor(SimpleRacingEnv())
@@ -27,6 +30,8 @@ def main():
         name_prefix="sac_checkpoint",
     )
 
+    logging_callback = LoggerCallback()
+
     model_logger = configure(
         f"artifacts/logs/{run_name}",
         ["stdout", "json"]
@@ -42,9 +47,10 @@ def main():
     model.set_logger(model_logger)
 
     model.learn(
-        total_timesteps=100_000,
-        callback=[eval_callback, checkpoint_callback],
+        total_timesteps=20_000,
+        callback=[eval_callback, checkpoint_callback, logging_callback],
         reset_num_timesteps=True,
+        # progress_bar=True,
     )
 
     model.save(f"artifacts/models/{run_name}_final")

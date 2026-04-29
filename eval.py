@@ -1,7 +1,6 @@
 from stable_baselines3 import SAC
 from env.SimpleRacingEnv import SimpleRacingEnv
 
-# MODEL_LOAD_PATH = "artifacts/models/newenv_sac_tiles_100k_action_repeat_2"
 MODEL_LOAD_PATH = "artifacts/models/best/sac_ar2_20260428_023721/best_model.zip"
 
 def main():
