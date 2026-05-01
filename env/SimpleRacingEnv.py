@@ -14,6 +14,7 @@ from .track import (
     compute_desired_direction,
     tangential_velocity,
     current_tile,
+    populate_dictionary_with_info
 )
 from configs import default as cfg
 
@@ -97,8 +98,8 @@ class SimpleRacingEnv(gym.Env):
         )
 
     def step(self, action):
-        steer = float(np.clip(action[0], -1.0, 1.0))
-        throttle = float(np.clip(action[1], -1.0, 1.0))
+        steer = float(np.tanh(action[0]))
+        throttle = float(np.tanh(action[1]))
 
         gas = max(throttle, 0.0)
         brake = max(-throttle, 0.0)
@@ -134,19 +135,24 @@ class SimpleRacingEnv(gym.Env):
             # Reward is now handled by rewards.py
             total_reward += compute_reward(self)
 
+            done_reason = "not_done"
+
             # If the car crashes by going off-track
             if abs(self._compute_radial_error()) > self.TRACK_HALF_WIDTH:
                 terminated = True
+                done_reason = "car_crash"
                 break
 
             # If the car performs a full lap
             if self.LAP_PROGRESS <= -2 * np.pi:
                 terminated = True
+                done_reason = "lap_completed"
                 break
 
             # If the episode is taking too long
             if self.STEPS >= self.MAX_STEPS:
                 truncated = True
+                done_reason = "timeout"
                 break
 
         observation = self._get_obs()
@@ -154,7 +160,17 @@ class SimpleRacingEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
 
-        info = {}
+        info = self._populate_dictionary_with_info(
+            steer=steer,
+            throttle=throttle,
+            gas=gas,
+            brake=brake,
+            reward=total_reward,
+            terminated=terminated,
+            truncated=truncated,
+            done_reason=done_reason,
+        )
+
         return observation, total_reward, terminated, truncated, info
 
     def reset(self, seed=None, options=None):
@@ -249,3 +265,26 @@ class SimpleRacingEnv(gym.Env):
 
     def _current_tile(self):
         return current_tile(self)
+
+    def _populate_dictionary_with_info(
+            self,
+            steer: float,
+            throttle: float,
+            gas: float,
+            brake: float,
+            reward: float,
+            terminated: bool,
+            truncated: bool,
+            done_reason: str | None,
+    ) -> dict:
+        return populate_dictionary_with_info(
+            self,
+            steer,
+            throttle,
+            gas,
+            brake,
+            reward,
+            terminated,
+            truncated,
+            done_reason,
+        )

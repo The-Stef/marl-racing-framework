@@ -1,4 +1,6 @@
 # https://stable-baselines3.readthedocs.io/en/master/guide/callbacks.html
+from numbers import Real
+
 from stable_baselines3.common.callbacks import BaseCallback
 
 class LoggerCallback(BaseCallback):
@@ -38,20 +40,23 @@ class LoggerCallback(BaseCallback):
 
         :return: If the callback returns False, training is aborted early.
         """
+        # Get individual value: self.locals['infos'][0]['test_field']}
+        # Set individual value (number): self.logger.record_mean("custom/test_field", self.locals['infos'][0]['test_field'])
 
-        # self.__class__.__name__ - BaseCallback?
-        # self.model.__class__.__name__ - SAC
-        # self.logger - <stable_baselines3.common.logger.Logger object at 0x000001C194AC9AD0>
-        # self.logger.__class__.__name__ - Logger
-        # self.globals - a bunch of stuff
-        # self.locals - a bunch of USEFUL stuff
+        infos = self.locals.get("infos", [])
 
+        for info in infos:
+            for key, value in info.items():
+                if key == "TimeLimit.truncated":
+                    continue
 
+                entry_name = f"custom/{key}"
 
-        # Get the value
-        # print(f"YO: {self.locals['infos'][0]['the_testt_reward']}")
-
-        # Save the value
-        self.logger.record_mean("custom/the_testt_reward", self.locals['infos'][0]['the_testt_reward'])
+                if isinstance(value, bool):
+                    self.logger.record(entry_name, value)
+                elif isinstance(value, Real):
+                    self.logger.record_mean(entry_name, float(value))
+                elif isinstance(value, str):
+                    self.logger.record(entry_name, value)
 
         return True

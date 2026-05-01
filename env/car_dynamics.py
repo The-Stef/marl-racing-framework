@@ -139,7 +139,7 @@ class Car:
         self.particles = []
 
     def gas(self, gas):
-        """control: rear wheel drive
+        """control: rear-wheel drive
 
         Args:
             gas (float): How much gas gets applied. Gets clipped between 0 and 1.

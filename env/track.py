@@ -57,3 +57,80 @@ def current_tile(env):
     # Map position to specific tile
     tile = int(theta / (2 * np.pi) * env.NUM_TILES)
     return tile
+
+def populate_dictionary_with_info(
+        self,
+        steer: float,
+        throttle: float,
+        gas: float,
+        brake: float,
+        reward: float,
+        terminated: bool,
+        truncated: bool,
+        done_reason: str | None,
+) -> dict:
+    """
+    Takes information from the step() function and adds it to the info dictionary.
+    :param self:
+    :param steer:
+    :param throttle:
+    :param gas:
+    :param brake:
+    :param reward:
+    :param terminated:
+    :param truncated:
+    :param done_reason:
+    :return:
+    """
+    car = self.CAR
+
+    # Position
+    x = float(car.hull.position[0])
+    y = float(car.hull.position[1])
+
+    # Velocity
+    vx = float(car.hull.linearVelocity[0])
+    vy = float(car.hull.linearVelocity[1])
+    speed = float(np.sqrt(vx ** 2 + vy ** 2))
+
+    # Track / lap progress
+    radial_error = float(self._compute_radial_error())
+
+    lap_progress_radians = float(self.LAP_PROGRESS)
+    lap_progress_percent = float(
+        np.clip((-self.LAP_PROGRESS / (2 * np.pi)) * 100.0, 0.0, 100.0)
+    )
+
+    info = {
+        # Timing
+        "steps": int(self.STEPS),
+
+        # Action
+        "steer": float(steer),
+        "throttle": float(throttle),
+        "gas": float(gas),
+        "brake": float(brake),
+
+        # Car state
+        "x": x,
+        "y": y,
+        "vx": vx,
+        "vy": vy,
+        "speed": speed,
+
+        # Track state
+        "radial_error": radial_error,
+        "abs_radial_error": abs(radial_error),
+        "lap_progress_radians": lap_progress_radians,
+        "lap_progress_percent": lap_progress_percent,
+
+        # Reward
+        "step_reward": float(reward),
+
+        # Episode ending
+        "terminated": bool(terminated),
+        "truncated": bool(truncated),
+        "done_reason": done_reason if done_reason is not None else "not_done",
+    }
+
+    return info
