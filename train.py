@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from callbacks.logger import LoggerCallback
+from analysis.plot_training import make_training_plots
 
 SEED = 42
 NAME = "the_testt"
@@ -73,6 +74,7 @@ def main():
     )
 
     model.save(str(results_dir / "final_model"))
+    make_training_plots(run_dir)
 
     env.close()
     eval_env.close()
