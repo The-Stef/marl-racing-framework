@@ -4,36 +4,55 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from env.SimpleRacingEnv import SimpleRacingEnv
 from datetime import datetime
+from pathlib import Path
 
 from callbacks.logger import LoggerCallback
 
 SEED = 42
 NAME = "the_testt"
-run_name = datetime.now().strftime(f"{NAME}_%Y%m%d_%H%M%S")
 
 def main():
-    env = Monitor(SimpleRacingEnv())
-    eval_env = Monitor(SimpleRacingEnv(render_mode="human"))
+    run_name = datetime.now().strftime(f"{NAME}_%Y%m%d_%H%M%S")
+
+    run_dir = Path("artifacts") / "runs" / run_name
+    logs_dir = run_dir / "logs"
+    results_dir = run_dir / "results"
+    best_dir = results_dir / "best"
+    checkpoints_dir = results_dir / "checkpoints"
+
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    best_dir.mkdir(parents=True, exist_ok=True)
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+
+    env = Monitor(
+        SimpleRacingEnv(),
+        filename=str(logs_dir / "train_monitor.csv")
+    )
+    eval_env = Monitor(
+        SimpleRacingEnv(render_mode="human"),
+        filename=str(logs_dir / "eval_monitor.csv")
+    )
 
     eval_callback = EvalCallback(
         eval_env,
         eval_freq=20_000,
         n_eval_episodes=5,
         deterministic=True,
-        best_model_save_path=f"artifacts/models/best/{run_name}",
-        log_path=f"artifacts/logs/{run_name}",
+        best_model_save_path=str(best_dir),
+        log_path=str(logs_dir),
     )
 
     checkpoint_callback = CheckpointCallback(
         save_freq=20_000,
-        save_path=f"artifacts/models/checkpoints/{run_name}",
+        save_path=str(checkpoints_dir),
         name_prefix="sac_checkpoint",
     )
 
     logging_callback = LoggerCallback()
 
     model_logger = configure(
-        f"artifacts/logs/{run_name}",
+        str(logs_dir),
         ["stdout", "json"]
     )
 
@@ -53,7 +72,7 @@ def main():
         # progress_bar=True,
     )
 
-    model.save(f"artifacts/models/{run_name}_final")
+    model.save(str(results_dir / "final_model"))
 
     env.close()
     eval_env.close()
