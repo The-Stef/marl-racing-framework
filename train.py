@@ -31,6 +31,7 @@ def main():
         SimpleRacingEnv(),
         filename=str(logs_dir / "train_monitor.csv")
     )
+
     eval_env = Monitor(
         SimpleRacingEnv(render_mode="human"),
         filename=str(logs_dir / "eval_monitor.csv")
@@ -73,7 +74,7 @@ def main():
     )
 
     model.learn(
-        total_timesteps=20_000,
+        total_timesteps=100_000,
         callback=callbacks,
         reset_num_timesteps=True,
         # progress_bar=True,
