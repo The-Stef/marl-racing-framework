@@ -53,6 +53,7 @@ class EpisodeLoggerCallback(BaseCallback):
             "termination_reason": "unknown",
             "lap_progress_radians": None,
             "lap_progress_percent": None,
+            "lap_count": 0,
 
             # Running stats
             "speed_sum": 0.0,
@@ -197,6 +198,7 @@ class EpisodeLoggerCallback(BaseCallback):
             "cumulative_reward": float(episode["cumulative_reward"]),
             "termination_reason": episode["termination_reason"],
 
+            "lap_count": int(episode["lap_count"]),
             "lap_progress_radians": episode["lap_progress_radians"],
             "lap_progress_percent": episode["lap_progress_percent"],
 
@@ -268,6 +270,11 @@ class EpisodeLoggerCallback(BaseCallback):
                 value = self._clean_value(info["lap_progress_percent"])
                 if value is not None:
                     episode["lap_progress_percent"] = value
+
+            if "lap_count" in info:
+                value = self._clean_value(info["lap_count"])
+                if value is not None:
+                    episode["lap_count"] = int(value)
 
             # -------------------------
             # Speed stats

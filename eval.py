@@ -1,7 +1,7 @@
 from stable_baselines3 import SAC
 from env.SimpleRacingEnv import SimpleRacingEnv
 
-MODEL_LOAD_PATH = "artifacts/models/best/sac_ar2_20260428_023721/best_model.zip"
+MODEL_LOAD_PATH = "artifacts/runs/successful_20260504_024325/results/best/best_model.zip"
 
 def main():
     env = SimpleRacingEnv(render_mode="human")

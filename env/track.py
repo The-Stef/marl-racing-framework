@@ -68,19 +68,10 @@ def populate_dictionary_with_info(
         terminated: bool,
         truncated: bool,
         done_reason: str | None,
+        lap_count: int,
 ) -> dict:
     """
     Takes information from the step() function and adds it to the info dictionary.
-    :param self:
-    :param steer:
-    :param throttle:
-    :param gas:
-    :param brake:
-    :param reward:
-    :param terminated:
-    :param truncated:
-    :param done_reason:
-    :return:
     """
     car = self.CAR
 
@@ -97,8 +88,15 @@ def populate_dictionary_with_info(
     radial_error = float(self._compute_radial_error())
 
     lap_progress_radians = float(self.LAP_PROGRESS)
+
+    # Total progress across all laps. 100 = one lap, 200 = two laps, etc.
     lap_progress_percent = float(
-        np.clip((-self.LAP_PROGRESS / (2 * np.pi)) * 100.0, 0.0, 100.0)
+        max((-self.LAP_PROGRESS / (2 * np.pi)) * 100.0, 0.0)
+    )
+
+    # Progress within the current lap only. This stays between 0 and 100.
+    current_lap_progress_percent = float(
+        lap_progress_percent % 100.0
     )
 
     info = {
@@ -121,8 +119,10 @@ def populate_dictionary_with_info(
         # Track state
         "radial_error": radial_error,
         "abs_radial_error": abs(radial_error),
+        "lap_count": int(lap_count),
         "lap_progress_radians": lap_progress_radians,
         "lap_progress_percent": lap_progress_percent,
+        "current_lap_progress_percent": current_lap_progress_percent,
 
         # Reward
         "step_reward": float(reward),

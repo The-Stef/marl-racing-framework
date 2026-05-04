@@ -145,11 +145,20 @@ class SimpleRacingEnv(gym.Env):
                 done_reason = "car_crash"
                 break
 
-            # If the car performs a full lap
-            if self.LAP_PROGRESS <= -2 * np.pi:
-                terminated = True
-                done_reason = "lap_completed"
-                break
+            # If the car completes another lap
+            next_lap_target = -2 * np.pi * (self.LAP_COUNT + 1)
+
+            if self.LAP_PROGRESS <= next_lap_target:
+                self.LAP_COUNT += 1
+
+                # Fixed-lap mode, e.g. MAX_LAPS = 1
+                if self.MAX_LAPS is not None and self.LAP_COUNT >= self.MAX_LAPS:
+                    terminated = True
+                    done_reason = "max_laps"
+                    break
+
+                # Endurance mode: lap completed, but episode continues
+                done_reason = "not_done"
 
             # If the episode is taking too long
             if self.STEPS >= self.MAX_STEPS:
@@ -171,6 +180,7 @@ class SimpleRacingEnv(gym.Env):
             terminated=terminated,
             truncated=truncated,
             done_reason=done_reason,
+            lap_count=self.LAP_COUNT,
         )
 
         return observation, total_reward, terminated, truncated, info
@@ -201,6 +211,7 @@ class SimpleRacingEnv(gym.Env):
             self.CAR.hull.position[0] - self.TRACK_CENTER_X
         )
         self.LAP_PROGRESS = 0.0
+        self.LAP_COUNT = 0
 
         # Create the tiles, with the starting tile already visited
         self.VISITED_TILES = {self._current_tile()}
@@ -278,6 +289,7 @@ class SimpleRacingEnv(gym.Env):
             terminated: bool,
             truncated: bool,
             done_reason: str | None,
+            lap_count: int,
     ) -> dict:
         return populate_dictionary_with_info(
             self,
@@ -289,4 +301,5 @@ class SimpleRacingEnv(gym.Env):
             terminated,
             truncated,
             done_reason,
+            lap_count,
         )

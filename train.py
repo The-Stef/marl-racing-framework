@@ -9,7 +9,7 @@ from callbacks.logger import EpisodeLoggerCallback
 from analysis.plot_training import make_training_plots
 
 SEED = 42
-NAME = "the_testt"
+NAME = "sac_endurance_100k"
 
 def main():
     # Set up directories to save metrics
