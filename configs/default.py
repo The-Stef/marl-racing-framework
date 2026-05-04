@@ -25,3 +25,6 @@ RADIAL_ERROR_WEIGHT = 0.5
 ANGULAR_VELOCITY_WEIGHT = 0.02
 OFF_TRACK_PENALTY = 100.0
 LAP_BONUS = 200.0
+
+# Set to a number n for n laps max, None for endurance mode
+MAX_LAPS = None

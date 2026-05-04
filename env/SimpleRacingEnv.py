@@ -66,6 +66,8 @@ class SimpleRacingEnv(gym.Env):
         # Lap Completion
         self.PREV_THETA = None # Accumulates angular progress
         self.LAP_PROGRESS = 0.0
+        self.LAP_COUNT = 0
+        self.MAX_LAPS = cfg.MAX_LAPS
 
         # Extra
         self.ACTION_REPEAT = cfg.ACTION_REPEAT
