@@ -8,8 +8,20 @@ import pygame
 from gymnasium import spaces
 
 from ...env.car_dynamics import Car
-
+from ...env.rendering import render_env
+from ...env.rewards import compute_reward
+from ...env.track import (
+    wrap_angle,
+    car_heading,
+    compute_radial_error,
+    compute_desired_direction,
+    tangential_velocity,
+    current_tile,
+    populate_dictionary_with_info
+)
 from configs import default as cfg
+
+from .helpers.helpers import current_tile
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -126,8 +138,7 @@ class MARLRacingEnv(ParallelEnv):
             # Set up each agent's lap count
             self.LAP_COUNT[agent] = 0
 
-            # TODO: Set up each agent's visited tiles
-            # self.VISITED_TILES[agent] = {self._current_tile(AGENT)}
+            self.VISITED_TILES[agent] = {current_tile(self, agent)}
 
         # the observations should be numpy arrays even if there is only one value
         observations = {
