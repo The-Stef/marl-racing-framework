@@ -79,11 +79,6 @@ class MARLRacingEnv(ParallelEnv):
         # Clock (pygame rendering)
         self.CLOCK = None
 
-        # TODO: Delete these?
-        # Hyperparameters
-        # self.ALPHA = alpha
-        # self.BETA = beta
-
         # Lap Completion
         self.PREV_THETA = {}  # Accumulates angular progress
         self.LAP_PROGRESS = {}
