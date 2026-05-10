@@ -1,5 +1,5 @@
 import functools
-
+from gymnasium.utils import seeding
 from pettingzoo import ParallelEnv
 import Box2D
 import gymnasium as gym
@@ -7,6 +7,7 @@ import numpy as np
 import pygame
 from gymnasium import spaces
 
+from ...env.car_dynamics import Car
 
 from configs import default as cfg
 
@@ -66,6 +67,7 @@ class MARLRacingEnv(ParallelEnv):
         # Clock (pygame rendering)
         self.CLOCK = None
 
+        # TODO: Delete these?
         # Hyperparameters
         # self.ALPHA = alpha
         # self.BETA = beta
@@ -84,7 +86,63 @@ class MARLRacingEnv(ParallelEnv):
         self.VISITED_TILES = {}
 
     def reset(self, seed=None, options=None):
-        pass
+        """Reset the environment to a starting point."""
+        # Unlike gymnasium's Env, the environment is responsible for setting the random seed explicitly.
+        if seed is not None:
+            self.np_random, self.np_random_seed = seeding.np_random(seed)
+        self.agents = self.possible_agents[:]
+
+        self.STEPS = 0
+
+        # Create the world
+        self.WORLD = Box2D.b2World((0, 0))
+
+        # Reset per-agent dictionaries
+        self.CARS = {}
+        self.PREV_THETA = {}
+        self.LAP_PROGRESS = {}
+        self.LAP_COUNT = {}
+        self.VISITED_TILES = {}
+
+        for i, agent in enumerate(self.agents):
+            # Set up each car
+            self.CARS[agent] = Car(
+                self.WORLD,
+                self.START_DIRECTION,
+                # TODO figure out positions
+                # self.CAR_START_POSITION_X,
+                # self.CAR_START_POSITION_Y
+            )
+
+            # Set up each prev_theta
+            self.PREV_THETA[agent] = np.arctan2(
+                self.CARS[agent].hull.position[1]- self.TRACK_CENTER_Y,
+                self.CARS[agent].hull.position[0] - self.TRACK_CENTER_X,
+            )
+
+            # Set up each agent's lap progress
+            self.LAP_PROGRESS[agent] = 0.0
+
+            # Set up each agent's lap count
+            self.LAP_COUNT[agent] = 0
+
+            # TODO: Set up each agent's visited tiles
+            # self.VISITED_TILES[agent] = {self._current_tile(AGENT)}
+
+        # the observations should be numpy arrays even if there is only one value
+        observations = {
+            # TODO agent: self._get_obs(agent)
+            agent: None
+            for agent in self.agents
+        }
+        infos = {
+            agent: {}
+            for agent in self.agents
+        }
+
+        self.state = observations
+
+        return observations, infos
 
     def step(self, actions):
         pass
