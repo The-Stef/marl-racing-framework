@@ -28,3 +28,6 @@ LAP_BONUS = 200.0
 
 # Set to a number n for n laps max, None for endurance mode
 MAX_LAPS = None
+
+# Agents
+NUM_AGENTS = 2

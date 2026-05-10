@@ -29,7 +29,7 @@ def render_env(self):
     # Draw car onto the canvas
     translation = center
     camera_angle = 0.0
-    self.CAR.draw(
+    self.CARS.draw(
         canvas,
         zoom=self.ZOOM,
         translation=translation,

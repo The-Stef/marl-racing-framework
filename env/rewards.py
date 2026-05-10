@@ -5,7 +5,7 @@ def compute_reward(env):
     """Compute reward for the current environment state."""
     radial_error = env._compute_radial_error()
     tangential_speed = env._tangential_velocity()
-    angular_velocity = abs(float(env.CAR.hull.angularVelocity))
+    angular_velocity = abs(float(env.CARS.hull.angularVelocity))
 
     # Check whether car is still on the track
     on_track = abs(radial_error) <= env.TRACK_HALF_WIDTH
