@@ -10,18 +10,18 @@ from gymnasium import spaces
 from ...env.car_dynamics import Car
 from ...env.rendering import render_env
 from ...env.rewards import compute_reward
-from ...env.track import (
-    wrap_angle,
-    car_heading,
-    compute_radial_error,
-    compute_desired_direction,
-    tangential_velocity,
-    current_tile,
-    populate_dictionary_with_info
-)
+# from ...env.track import (
+#     wrap_angle,
+#     car_heading,
+#     compute_radial_error,
+#     compute_desired_direction,
+#     tangential_velocity,
+#     current_tile,
+#     populate_dictionary_with_info
+# )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile
+from .helpers.helpers import current_tile, get_obs
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -68,6 +68,7 @@ class MARLRacingEnv(ParallelEnv):
         self.CARS = {}
         self.MAX_SPEED = cfg.MAX_SPEED
         self.START_DIRECTION = cfg.START_DIRECTION
+        # TODO: Car start positions
         # self.CAR_START_POSITION_Y = self.TRACK_CENTER_Y
         # self.CAR_START_POSITION_X = self.TRACK_CENTER_X - self.TRACK_RADIUS
 
@@ -137,8 +138,7 @@ class MARLRacingEnv(ParallelEnv):
 
         # the observations should be numpy arrays even if there is only one value
         observations = {
-            # TODO agent: self._get_obs(agent)
-            agent: None
+            agent: get_obs(self, agent)
             for agent in self.agents
         }
         infos = {
