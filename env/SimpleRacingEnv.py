@@ -151,10 +151,13 @@ class SimpleRacingEnv(gym.Env):
             if self.LAP_PROGRESS <= next_lap_target:
                 self.LAP_COUNT += 1
 
+                # Reset tile rewards for the new lap
+                self.VISITED_TILES = {self._current_tile()}
+
                 # Fixed-lap mode, e.g. MAX_LAPS = 1
                 if self.MAX_LAPS is not None and self.LAP_COUNT >= self.MAX_LAPS:
                     terminated = True
-                    done_reason = "max_laps"
+                    done_reason = "max_laps_reached"
                     break
 
                 # Endurance mode: lap completed, but episode continues

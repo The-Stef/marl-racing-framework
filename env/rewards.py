@@ -23,20 +23,20 @@ def compute_reward(env):
     reward += new_tile_reward
 
     # Reward real clockwise motion, punish backward motion
-    reward += cfg.TANGENTIAL_SPEED_WEIGHT * tangential_speed
+    # reward += cfg.TANGENTIAL_SPEED_WEIGHT * tangential_speed
 
     # Stay near centerline
-    reward -= cfg.RADIAL_ERROR_WEIGHT * abs(radial_error)
+    # reward -= cfg.RADIAL_ERROR_WEIGHT * abs(radial_error)
 
     # Punish spinning in place
-    reward -= cfg.ANGULAR_VELOCITY_WEIGHT * angular_velocity
+    # reward -= cfg.ANGULAR_VELOCITY_WEIGHT * angular_velocity
 
     # Big crash penalty
     if not on_track:
         reward -= cfg.OFF_TRACK_PENALTY
 
     # Lap bonus
-    if env.LAP_PROGRESS <= -2 * np.pi:
+    if env.LAP_PROGRESS <= -2 * np.pi * (env.LAP_COUNT + 1):
         reward += cfg.LAP_BONUS
 
     return reward
