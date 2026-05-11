@@ -21,7 +21,7 @@ from ...env.rewards import compute_reward
 # )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile, get_obs, compute_car_start_position
+from .helpers.helpers import current_tile, get_obs, compute_car_start_position, render_env
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -152,7 +152,7 @@ class MARLRacingEnv(ParallelEnv):
         pass
 
     def render(self):
-        pass
+        render_env(self)
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
