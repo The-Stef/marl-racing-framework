@@ -66,3 +66,10 @@ def compute_radial_error(env, agent):
         (env.TRACK_CENTER_Y - env.CARS[agent].hull.position[1]) ** 2
     )
     return distance_from_center - env.TRACK_RADIUS
+
+# TODO figure out positions
+def compute_car_start_position(env, agent):
+    """Compute the current car's starting position."""
+
+
+    return x, y

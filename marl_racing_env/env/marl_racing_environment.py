@@ -21,7 +21,7 @@ from ...env.rewards import compute_reward
 # )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile, get_obs
+from .helpers.helpers import current_tile, get_obs, compute_car_start_position
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -64,13 +64,10 @@ class MARLRacingEnv(ParallelEnv):
         self.TRACK_CENTER_Y = cfg.TRACK_CENTER_Y
         self.TRACK_HALF_WIDTH = cfg.TRACK_HALF_WIDTH
 
-        # Car
+        # Cars
         self.CARS = {}
         self.MAX_SPEED = cfg.MAX_SPEED
         self.START_DIRECTION = cfg.START_DIRECTION
-        # TODO: Car start positions
-        # self.CAR_START_POSITION_Y = self.TRACK_CENTER_Y
-        # self.CAR_START_POSITION_X = self.TRACK_CENTER_X - self.TRACK_RADIUS
 
         # Screen (pygame rendering)
         self.SCREEN = None
@@ -113,13 +110,14 @@ class MARLRacingEnv(ParallelEnv):
         self.VISITED_TILES = {}
 
         for i, agent in enumerate(self.agents):
+            car_start_position_x, car_start_position_y = compute_car_start_position(self, agent)
+
             # Set up each car
             self.CARS[agent] = Car(
                 self.WORLD,
                 self.START_DIRECTION,
-                # TODO figure out positions
-                # self.CAR_START_POSITION_X,
-                # self.CAR_START_POSITION_Y
+                car_start_position_x,
+                car_start_position_y
             )
 
             # Set up each prev_theta
