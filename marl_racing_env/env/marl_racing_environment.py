@@ -110,7 +110,7 @@ class MARLRacingEnv(ParallelEnv):
         self.VISITED_TILES = {}
 
         for i, agent in enumerate(self.agents):
-            car_start_position_x, car_start_position_y = compute_car_start_position(self, agent)
+            car_start_position_x, car_start_position_y = compute_car_start_position(self, agent, i)
 
             # Set up each car
             self.CARS[agent] = Car(

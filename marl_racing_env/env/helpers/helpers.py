@@ -68,8 +68,39 @@ def compute_radial_error(env, agent):
     return distance_from_center - env.TRACK_RADIUS
 
 # TODO figure out positions
-def compute_car_start_position(env, agent):
-    """Compute the current car's starting position."""
+def compute_car_start_position(env, agent, idx):
+    """Compute the current car's starting position in a grid that has 2 cars per row."""
 
+    cars_per_row = 2
+    lateral_spacing = 2.5
+    longitudinal_spacing = 4.0
+
+    # Current agent's grid position
+    row = idx // cars_per_row
+    col = idx % cars_per_row
+
+    # Grid starts from this position
+    start_theta = np.pi
+
+    # Middle of the road at the starting line
+    centerline_x = env.TRACK_CENTER_X + env.TRACK_RADIUS * np.cos(start_theta)
+    centerline_y = env.TRACK_CENTER_Y + env.TRACK_RADIUS * np.sin(start_theta)
+
+    # The track's sideways & forward directions (used for car placements)
+    radial_x = np.cos(start_theta)
+    radial_y = np.sin(start_theta)
+
+    tangent_x = np.sin(start_theta)
+    tangent_y = -np.cos(start_theta)
+
+    # How faw sideways the car should be
+    lateral_offset = (col - 0.5) * lateral_spacing
+
+    # How far backwards the car should be
+    backward_offset = row * longitudinal_spacing
+
+    # Compute final x & y
+    x = centerline_x + lateral_offset * radial_x - backward_offset * tangent_x
+    y = centerline_y + lateral_offset * radial_y - backward_offset * tangent_y
 
     return x, y
