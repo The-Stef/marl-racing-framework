@@ -21,7 +21,7 @@ from ...env.rewards import compute_reward
 # )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile, get_obs, compute_car_start_position, render_env
+from .helpers.helpers import current_tile, get_obs, compute_car_start_position, render_env, compute_radial_error, compute_reward
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -149,7 +149,115 @@ class MARLRacingEnv(ParallelEnv):
         return observations, infos
 
     def step(self, actions):
-        pass
+        # If a user passes in actions with no agents, then just return empty observations, etc.
+        if not actions:
+            self.agents = []
+            return {}, {}, {}, {}, {}
+
+        # Rewards for all agents are placed in the rewards dictionary to be returned
+        rewards = {}
+
+        # Same for the observations
+        observations = {}
+
+        terminations = {agent: False for agent in self.agents}
+        truncations = {agent: False for agent in self.agents}
+        done_reasons = {agent: "not_done" for agent in self.agents}
+
+        next_lap_target = {}
+
+        for _ in range(self.ACTION_REPEAT):
+            self.STEPS += 1
+
+            for i, agent in enumerate(self.agents):
+                total_reward = 0.0
+                steer = float(np.tanh(actions[agent][0]))
+                throttle = float(np.tanh(actions[agent][1]))
+
+                gas = max(throttle, 0.0)
+                brake = max(-throttle, 0.0)
+
+                self.CARS[agent].steer(steer)
+                self.CARS[agent].gas(gas)
+                self.CARS[agent].brake(brake)
+
+                self.CARS[agent].step(self.DT)
+                self.WORLD.Step(self.DT, 6, 2) #TODO I'm guessing this one goes OOTL?
+
+                theta = np.arctan2(
+                    self.CARS[agent].hull.position[1] - self.TRACK_CENTER_Y,
+                    self.CARS[agent].hull.position[0] - self.TRACK_CENTER_X
+                )
+
+                dtheta = theta - self.PREV_THETA[agent]
+                if dtheta > np.pi:
+                    dtheta -= 2 * np.pi
+                elif dtheta < -np.pi:
+                    dtheta += 2 * np.pi
+
+                self.LAP_PROGRESS[agent] += dtheta
+                self.PREV_THETA[agent] = theta
+
+                # Reward is now handled by helpers.py
+                total_reward += compute_reward(self, agent)
+                rewards[agent] += total_reward
+
+                # If the car crashes by going off-track
+                if abs(compute_radial_error(self, agent)) > self.TRACK_HALF_WIDTH:
+                    terminations[agent] = True
+                    done_reasons[agent] = "car_crash"
+                    break
+
+                # If the car completes another lap
+                next_lap_target[agent] = -2 * np.pi * (self.LAP_COUNT[agent] + 1)
+
+                if self.LAP_PROGRESS[agent] <= next_lap_target[agent]:
+                    self.LAP_COUNT[agent] += 1
+
+                    # Reset tile rewards for the new lap
+                    self.VISITED_TILES = {current_tile(self, agent)}
+
+                    #TODO - does this fixed lap # logic stay the same for multi-agent settings?
+                    # # Fixed-lap mode, e.g. MAX_LAPS = 1
+                    # if self.MAX_LAPS is not None and self.LAP_COUNT >= self.MAX_LAPS:
+                    #     terminated = True
+                    #     done_reason = "max_laps_reached"
+                    #     break
+
+                    # Endurance mode: lap completed, but episode continues
+                    done_reasons[agent] = "not_done"
+
+                # If the episode is taking too long
+                if self.STEPS >= self.MAX_STEPS:
+                    truncations = {agent: False for agent in self.agents}
+                    done_reasons = {agent: "timeout" for agent in self.agents}
+                    break
+
+                observations[agent] = get_obs(self, agent)
+
+                if self.render_mode == "human":
+                    self.render()
+
+                #TODO - reintroduce info dictionary
+                # info = self._populate_dictionary_with_info(
+                #     steer=steer,
+                #     throttle=throttle,
+                #     gas=gas,
+                #     brake=brake,
+                #     reward=total_reward,
+                #     terminated=terminated,
+                #     truncated=truncated,
+                #     done_reason=done_reason,
+                #     lap_count=self.LAP_COUNT,
+                # )
+
+        self.state = observations
+
+        # typically there won't be any information in the infos, but there must
+        # still be an entry for each agent
+        infos = {agent: {} for agent in self.agents}
+
+        return observations, rewards, terminations, truncations, infos
 
     def render(self):
         render_env(self)

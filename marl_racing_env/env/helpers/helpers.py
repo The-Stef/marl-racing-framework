@@ -150,3 +150,6 @@ def render_env(env):
 
     pygame.display.flip()
     env.CLOCK.tick(env.metadata["render_fps"])
+
+def compute_reward(env, agent):
+    pass
