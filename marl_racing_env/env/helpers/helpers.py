@@ -1,5 +1,6 @@
 import numpy as np
 import pygame
+from configs import default as cfg
 
 def current_tile(env, agent):
     """Return current angular tile index for current agent around the circular track."""
@@ -151,5 +152,57 @@ def render_env(env):
     pygame.display.flip()
     env.CLOCK.tick(env.metadata["render_fps"])
 
+def tangential_velocity(env, agent):
+    """Project car velocity onto the clockwise tangent direction."""
+    rx = env.CARS[agent].hull.position[0] - env.TRACK_CENTER_X
+    ry = env.CARS[agent].hull.position[1] - env.TRACK_CENTER_Y
+    r = np.sqrt(rx * rx + ry * ry) + 1e-8
+
+    # Clockwise tangent
+    tx = ry / r
+    ty = -rx / r
+
+    vx = env.CARS[agent].hull.linearVelocity[0]
+    vy = env.CARS[agent].hull.linearVelocity[1]
+
+    return vx * tx + vy * ty
+
 def compute_reward(env, agent):
-    pass
+    """Compute reward for the current environment state & current agent."""
+    radial_error = compute_radial_error(env, agent)
+    tangential_speed = tangential_velocity(env, agent)
+    angular_velocity = abs(float(env.CARS[agent].hull.angularVelocity))
+
+    # Check whether car is still on the track
+    on_track = abs(radial_error) <= env.TRACK_HALF_WIDTH
+
+    reward = 0.0
+
+    # Reward exploration, but only while on track
+    tile = current_tile(env, agent)
+    new_tile_reward = 0.0
+
+    if on_track and tile not in env.VISITED_TILES[agent]:
+        env.VISITED_TILES[agent].add(tile)
+        new_tile_reward = cfg.NEW_TILE_REWARD
+
+    reward += new_tile_reward
+
+    # Reward real clockwise motion, punish backward motion
+    # reward += cfg.TANGENTIAL_SPEED_WEIGHT * tangential_speed
+
+    # Stay near centerline
+    # reward -= cfg.RADIAL_ERROR_WEIGHT * abs(radial_error)
+
+    # Punish spinning in place
+    # reward -= cfg.ANGULAR_VELOCITY_WEIGHT * angular_velocity
+
+    # Big crash penalty
+    if not on_track:
+        reward -= cfg.OFF_TRACK_PENALTY
+
+    # Lap bonus
+    if env.LAP_PROGRESS[agent] <= -2 * np.pi * (env.LAP_COUNT[agent] + 1):
+        reward += cfg.LAP_BONUS
+
+    return reward
