@@ -7,9 +7,12 @@ import numpy as np
 import pygame
 from gymnasium import spaces
 
-from ...env.car_dynamics import Car
-from ...env.rendering import render_env
-from ...env.rewards import compute_reward
+# from ...env.car_dynamics import Car
+# from ...env.rendering import render_env
+# from ...env.rewards import compute_reward
+
+from ..car_dynamics import Car
+
 # from ...env.track import (
 #     wrap_angle,
 #     car_heading,
@@ -154,23 +157,27 @@ class MARLRacingEnv(ParallelEnv):
             self.agents = []
             return {}, {}, {}, {}, {}
 
+        live_agents = self.agents[:]
+
         # Rewards for all agents are placed in the rewards dictionary to be returned
-        rewards = {}
+        rewards = {agent: 0.0 for agent in live_agents}
 
         # Same for the observations
         observations = {}
 
-        terminations = {agent: False for agent in self.agents}
-        truncations = {agent: False for agent in self.agents}
-        done_reasons = {agent: "not_done" for agent in self.agents}
+        terminations = {agent: False for agent in live_agents}
+        truncations = {agent: False for agent in live_agents}
+        done_reasons = {agent: "not_done" for agent in live_agents}
 
         next_lap_target = {}
 
         for _ in range(self.ACTION_REPEAT):
             self.STEPS += 1
 
-            for i, agent in enumerate(self.agents):
-                total_reward = 0.0
+            for agent in live_agents:
+                if terminations[agent] or truncations[agent]:
+                    continue
+
                 steer = float(np.tanh(actions[agent][0]))
                 throttle = float(np.tanh(actions[agent][1]))
 
@@ -199,8 +206,7 @@ class MARLRacingEnv(ParallelEnv):
                 self.PREV_THETA[agent] = theta
 
                 # Reward is now handled by helpers.py
-                total_reward += compute_reward(self, agent)
-                rewards[agent] += total_reward
+                rewards[agent] += compute_reward(self, agent)
 
                 # If the car crashes by going off-track
                 if abs(compute_radial_error(self, agent)) > self.TRACK_HALF_WIDTH:
@@ -215,7 +221,7 @@ class MARLRacingEnv(ParallelEnv):
                     self.LAP_COUNT[agent] += 1
 
                     # Reset tile rewards for the new lap
-                    self.VISITED_TILES = {current_tile(self, agent)}
+                    self.VISITED_TILES[agent] = {current_tile(self, agent)}
 
                     #TODO - does this fixed lap # logic stay the same for multi-agent settings?
                     # # Fixed-lap mode, e.g. MAX_LAPS = 1
@@ -229,14 +235,14 @@ class MARLRacingEnv(ParallelEnv):
 
                 # If the episode is taking too long
                 if self.STEPS >= self.MAX_STEPS:
-                    truncations = {agent: False for agent in self.agents}
-                    done_reasons = {agent: "timeout" for agent in self.agents}
+                    for agent in live_agents:
+                        if not terminations[agent]:
+                            truncations[agent] = True
+                            done_reasons[agent] = "timeout"
                     break
 
-                observations[agent] = get_obs(self, agent)
-
-                if self.render_mode == "human":
-                    self.render()
+                if all(terminations[a] or truncations[a] for a in live_agents):
+                    break
 
                 #TODO - reintroduce info dictionary
                 # info = self._populate_dictionary_with_info(
@@ -251,11 +257,26 @@ class MARLRacingEnv(ParallelEnv):
                 #     lap_count=self.LAP_COUNT,
                 # )
 
+        observations = {
+            agent: get_obs(self, agent)
+            for agent in live_agents
+        }
+
+        infos = {
+            agent: {"done_reason": done_reasons[agent]}
+            for agent in live_agents
+        }
+
+        self.agents = [
+            agent
+            for agent in live_agents
+            if not terminations[agent] and not truncations[agent]
+        ]
+
         self.state = observations
 
-        # typically there won't be any information in the infos, but there must
-        # still be an entry for each agent
-        infos = {agent: {} for agent in self.agents}
+        if self.render_mode == "human":
+            self.render()
 
         return observations, rewards, terminations, truncations, infos
 
