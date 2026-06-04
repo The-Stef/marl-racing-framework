@@ -37,9 +37,15 @@ def get_obs(env, agent):
 
     angular_velocity = float(env.CARS[agent].hull.angularVelocity)
 
-    return np.array(
+    observation = np.array(
         [velocity, heading_error, radial_error, angular_velocity],
         dtype=np.float32
+    )
+
+    return np.clip(
+        observation,
+        env.observation_space(agent).low,
+        env.observation_space(agent).high,
     )
 
 def wrap_angle(angle):
@@ -69,42 +75,43 @@ def compute_radial_error(env, agent):
     )
     return distance_from_center - env.TRACK_RADIUS
 
-def compute_car_start_position(env, agent, idx):
-    """Compute the current car's starting position in a grid that has 2 cars per row."""
+def compute_car_start_pose(env, agent, idx):
+    """Compute the car's starting position and heading on the circular track."""
 
     cars_per_row = 2
     lateral_spacing = 2.5
     longitudinal_spacing = 4.0
 
-    # Current agent's grid position
     row = idx // cars_per_row
     col = idx % cars_per_row
 
-    # Grid starts from this position
     start_theta = np.pi
 
-    # Middle of the road at the starting line
-    centerline_x = env.TRACK_CENTER_X + env.TRACK_RADIUS * np.cos(start_theta)
-    centerline_y = env.TRACK_CENTER_Y + env.TRACK_RADIUS * np.sin(start_theta)
+    # Move row along the circular track
+    theta_offset = row * longitudinal_spacing / env.TRACK_RADIUS
+    theta = start_theta + theta_offset
 
-    # The track's sideways & forward directions (used for car placements)
-    radial_x = np.cos(start_theta)
-    radial_y = np.sin(start_theta)
+    # Radial direction at this theta
+    radial_x = np.cos(theta)
+    radial_y = np.sin(theta)
 
-    tangent_x = np.sin(start_theta)
-    tangent_y = -np.cos(start_theta)
+    # Centerline point for this row
+    centerline_x = env.TRACK_CENTER_X + env.TRACK_RADIUS * np.cos(theta)
+    centerline_y = env.TRACK_CENTER_Y + env.TRACK_RADIUS * np.sin(theta)
 
-    # How faw sideways the car should be
+    # Side-by-side lane placement
     lateral_offset = (col - 0.5) * lateral_spacing
 
-    # How far backwards the car should be
-    backward_offset = row * longitudinal_spacing
+    x = centerline_x + lateral_offset * radial_x
+    y = centerline_y + lateral_offset * radial_y
 
-    # Compute final x & y
-    x = centerline_x + lateral_offset * radial_x - backward_offset * tangent_x
-    y = centerline_y + lateral_offset * radial_y - backward_offset * tangent_y
+    # Tangent direction = forward direction along the circle
+    tangent_x = np.sin(theta)
+    tangent_y = -np.cos(theta)
 
-    return x, y
+    start_direction = np.arctan2(-tangent_x, tangent_y)
+
+    return x, y, start_direction
 
 def render_env(env):
     if env.SCREEN is None:

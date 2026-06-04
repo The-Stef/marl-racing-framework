@@ -24,7 +24,7 @@ from ..car_dynamics import Car
 # )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile, get_obs, compute_car_start_position, render_env, compute_radial_error, compute_reward
+from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, compute_reward
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -113,12 +113,12 @@ class MARLRacingEnv(ParallelEnv):
         self.VISITED_TILES = {}
 
         for i, agent in enumerate(self.agents):
-            car_start_position_x, car_start_position_y = compute_car_start_position(self, agent, i)
+            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, i)
 
             # Set up each car
             self.CARS[agent] = Car(
                 self.WORLD,
-                self.START_DIRECTION,
+                car_start_direction,
                 car_start_position_x,
                 car_start_position_y
             )
@@ -139,7 +139,7 @@ class MARLRacingEnv(ParallelEnv):
 
         # the observations should be numpy arrays even if there is only one value
         observations = {
-            agent: get_obs(self, agent)
+            agent: get_obs(self, agent).astype(np.float32)
             for agent in self.agents
         }
         infos = {
@@ -189,7 +189,12 @@ class MARLRacingEnv(ParallelEnv):
                 self.CARS[agent].brake(brake)
 
                 self.CARS[agent].step(self.DT)
-                self.WORLD.Step(self.DT, 6, 2) #TODO I'm guessing this one goes OOTL?
+
+            self.WORLD.Step(self.DT, 6, 2) #TODO I'm guessing this one goes OOTL?
+
+            for agent in live_agents:
+                if terminations[agent] or truncations[agent]:
+                    continue
 
                 theta = np.arctan2(
                     self.CARS[agent].hull.position[1] - self.TRACK_CENTER_Y,
@@ -212,7 +217,7 @@ class MARLRacingEnv(ParallelEnv):
                 if abs(compute_radial_error(self, agent)) > self.TRACK_HALF_WIDTH:
                     terminations[agent] = True
                     done_reasons[agent] = "car_crash"
-                    break
+                    continue
 
                 # If the car completes another lap
                 next_lap_target[agent] = -2 * np.pi * (self.LAP_COUNT[agent] + 1)
@@ -233,16 +238,16 @@ class MARLRacingEnv(ParallelEnv):
                     # Endurance mode: lap completed, but episode continues
                     done_reasons[agent] = "not_done"
 
-                # If the episode is taking too long
-                if self.STEPS >= self.MAX_STEPS:
-                    for agent in live_agents:
-                        if not terminations[agent]:
-                            truncations[agent] = True
-                            done_reasons[agent] = "timeout"
-                    break
+            # If the episode is taking too long
+            if self.STEPS >= self.MAX_STEPS:
+                for agent in live_agents:
+                    if not terminations[agent]:
+                        truncations[agent] = True
+                        done_reasons[agent] = "timeout"
+                break
 
-                if all(terminations[a] or truncations[a] for a in live_agents):
-                    break
+            if all(terminations[a] or truncations[a] for a in live_agents):
+                break
 
                 #TODO - reintroduce info dictionary
                 # info = self._populate_dictionary_with_info(
@@ -258,7 +263,7 @@ class MARLRacingEnv(ParallelEnv):
                 # )
 
         observations = {
-            agent: get_obs(self, agent)
+            agent: get_obs(self, agent).astype(np.float32)
             for agent in live_agents
         }
 
