@@ -56,7 +56,7 @@ def main():
         .env_runners(num_env_runners=4, rollout_fragment_length=128)
         .training(
             train_batch_size=2048,
-            lr=1e-5,
+            lr=1e-4,
             gamma=0.99,
             lambda_=0.95,
             use_gae=True,
@@ -64,7 +64,7 @@ def main():
             grad_clip=0.5,
             entropy_coeff=0.01,
             vf_loss_coeff=0.25,
-            num_epochs=5,
+            num_epochs=10,
         )
         .debugging(log_level="ERROR")
         .framework(framework="torch")
@@ -77,7 +77,7 @@ def main():
 
     PROJECT_ROOT = Path(__file__).resolve().parent
     storage_uri = (
-            PROJECT_ROOT / "runs" / "ray_results" / env_name
+            PROJECT_ROOT / "artifacts" / "ray_results" / env_name
     ).resolve().as_uri()
 
     tune.run(

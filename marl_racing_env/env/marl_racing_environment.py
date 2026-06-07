@@ -1,4 +1,6 @@
 import functools
+import random
+
 from gymnasium.utils import seeding
 from pettingzoo import ParallelEnv
 import Box2D
@@ -112,7 +114,10 @@ class MARLRacingEnv(ParallelEnv):
         self.LAP_COUNT = {}
         self.VISITED_TILES = {}
 
-        for i, agent in enumerate(self.agents):
+        # Assign random positions for agents each time they spawn
+        shuffled_agents = self.agents[:]
+        self.np_random.shuffle(shuffled_agents)
+        for i, agent in enumerate(shuffled_agents):
             car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, i)
 
             # Set up each car
@@ -120,9 +125,10 @@ class MARLRacingEnv(ParallelEnv):
                 self.WORLD,
                 car_start_direction,
                 car_start_position_x,
-                car_start_position_y
+                car_start_position_y,
             )
 
+        for i, agent in enumerate(self.agents):
             # Set up each prev_theta
             self.PREV_THETA[agent] = np.arctan2(
                 self.CARS[agent].hull.position[1]- self.TRACK_CENTER_Y,
@@ -268,7 +274,10 @@ class MARLRacingEnv(ParallelEnv):
         }
 
         infos = {
-            agent: {"done_reason": done_reasons[agent]}
+            agent: {
+                "done_reason": done_reasons[agent],
+                "lap_progress": self.LAP_PROGRESS[agent],
+            }
             for agent in live_agents
         }
 
@@ -298,11 +307,11 @@ class MARLRacingEnv(ParallelEnv):
         # Speed, Heading error, Radial error, angular velocity
         return spaces.Box(
         low=np.array(
-            [0.0, -np.pi, -self.TRACK_HALF_WIDTH, -20.0],
+            [0.0, -np.pi, -self.TRACK_HALF_WIDTH, -20.0, 0.0],
             dtype=np.float32
         ),
         high=np.array(
-            [self.MAX_SPEED, np.pi, self.TRACK_HALF_WIDTH, 20.0],
+            [self.MAX_SPEED, np.pi, self.TRACK_HALF_WIDTH, 20.0, 4.0],
             dtype=np.float32
         ),
         dtype=np.float32

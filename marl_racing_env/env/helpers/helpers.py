@@ -37,8 +37,10 @@ def get_obs(env, agent):
 
     angular_velocity = float(env.CARS[agent].hull.angularVelocity)
 
+    distance_to_other_agent = compute_distance_to_other_agent(env, agent)
+
     observation = np.array(
-        [velocity, heading_error, radial_error, angular_velocity],
+        [velocity, heading_error, radial_error, angular_velocity, distance_to_other_agent],
         dtype=np.float32
     )
 
@@ -173,6 +175,28 @@ def tangential_velocity(env, agent):
     vy = env.CARS[agent].hull.linearVelocity[1]
 
     return vx * tx + vy * ty
+
+def compute_distance_to_other_agent(env, agent):
+    """In a two agent setting, get current agent's distance to other agent."""
+    own_pos = env.CARS[agent].hull.position
+
+    other_agents = [
+        other_agent
+        for other_agent in env.CARS.keys()
+        if other_agent != agent
+    ]
+
+    if not other_agents:
+        return 0.0
+
+    other_pos = env.CARS[other_agents[0]].hull.position
+
+    dx = other_pos[0] - own_pos[0]
+    dy = other_pos[1] - own_pos[1]
+
+    distance = np.sqrt(dx ** 2 + dy ** 2)
+
+    return float(distance / env.TRACK_RADIUS)
 
 def compute_reward(env, agent):
     """Compute reward for the current environment state & current agent."""
