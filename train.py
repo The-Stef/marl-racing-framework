@@ -75,12 +75,15 @@ def main():
         )
     )
 
-    storage_uri = (Path("~/ray_results") / env_name).expanduser().resolve().as_uri()
+    PROJECT_ROOT = Path(__file__).resolve().parent
+    storage_uri = (
+            PROJECT_ROOT / "runs" / "ray_results" / env_name
+    ).resolve().as_uri()
 
     tune.run(
         "PPO",
         name="PPO",
-        stop={"timesteps_total": 500000 if not os.environ.get("CI") else 50000},
+        stop={"timesteps_total": 1000000 if not os.environ.get("CI") else 50000},
         checkpoint_freq=10,
         storage_path=storage_uri,
         config=config.to_dict(),
