@@ -272,6 +272,11 @@ class MARLRacingEnv(ParallelEnv):
             for agent in live_agents
         }
 
+        for agent in self.agents:
+            if terminations[agent] or truncations[agent]:
+                self.CARS[agent].destroy()
+                del self.CARS[agent]
+
         self.agents = [
             agent
             for agent in live_agents
