@@ -98,7 +98,7 @@ class MARLRacingEnv(ParallelEnv):
     def reset(self, seed=None, options=None):
         """Reset the environment to a starting point."""
         # Unlike gymnasium's Env, the environment is responsible for setting the random seed explicitly.
-        if seed is not None:
+        if seed is not None or not hasattr(self, "np_random"):
             self.np_random, self.np_random_seed = seeding.np_random(seed)
         self.agents = self.possible_agents[:]
 
