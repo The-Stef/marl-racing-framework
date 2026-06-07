@@ -190,7 +190,7 @@ class MARLRacingEnv(ParallelEnv):
 
                 self.CARS[agent].step(self.DT)
 
-            self.WORLD.Step(self.DT, 6, 2) #TODO I'm guessing this one goes OOTL?
+            self.WORLD.Step(self.DT, 6, 2)
 
             for agent in live_agents:
                 if terminations[agent] or truncations[agent]:
