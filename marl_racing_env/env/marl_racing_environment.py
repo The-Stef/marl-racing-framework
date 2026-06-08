@@ -26,7 +26,7 @@ from ..car_dynamics import Car
 # )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, compute_reward
+from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, incomplete_lap_penalty, compute_reward
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
@@ -221,6 +221,7 @@ class MARLRacingEnv(ParallelEnv):
 
                 # If the car crashes by going off-track
                 if abs(compute_radial_error(self, agent)) > self.TRACK_HALF_WIDTH:
+                    rewards[agent] -= incomplete_lap_penalty(self, agent)
                     terminations[agent] = True
                     done_reasons[agent] = "car_crash"
                     continue
@@ -248,6 +249,7 @@ class MARLRacingEnv(ParallelEnv):
             if self.STEPS >= self.MAX_STEPS:
                 for agent in live_agents:
                     if not terminations[agent]:
+                        rewards[agent] -= incomplete_lap_penalty(self, agent)
                         truncations[agent] = True
                         done_reasons[agent] = "timeout"
                 break

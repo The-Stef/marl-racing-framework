@@ -198,11 +198,18 @@ def compute_distance_to_other_agent(env, agent):
 
     return float(distance / env.TRACK_RADIUS)
 
+def incomplete_lap_penalty(env, agent):
+    """Compute a sparse penalty component for lack of progress along the track."""
+    total_forward_progress = -env.LAP_PROGRESS[agent]
+    current_lap_progress = total_forward_progress - env.LAP_COUNT[agent] * 2 * np.pi
+    current_lap_progress = np.clip(current_lap_progress, 0.0, 2 * np.pi)
+    lap_fraction = current_lap_progress / (2 * np.pi)
+
+    return cfg.INCOMPLETE_LAP_PENALTY * (1.0 - lap_fraction)
+
 def compute_reward(env, agent):
     """Compute reward for the current environment state & current agent."""
     radial_error = compute_radial_error(env, agent)
-    tangential_speed = tangential_velocity(env, agent)
-    angular_velocity = abs(float(env.CARS[agent].hull.angularVelocity))
 
     # Check whether car is still on the track
     on_track = abs(radial_error) <= env.TRACK_HALF_WIDTH
@@ -218,15 +225,6 @@ def compute_reward(env, agent):
         new_tile_reward = cfg.NEW_TILE_REWARD
 
     reward += new_tile_reward
-
-    # Reward real clockwise motion, punish backward motion
-    # reward += cfg.TANGENTIAL_SPEED_WEIGHT * tangential_speed
-
-    # Stay near centerline
-    # reward -= cfg.RADIAL_ERROR_WEIGHT * abs(radial_error)
-
-    # Punish spinning in place
-    # reward -= cfg.ANGULAR_VELOCITY_WEIGHT * angular_velocity
 
     # Big crash penalty
     if not on_track:
