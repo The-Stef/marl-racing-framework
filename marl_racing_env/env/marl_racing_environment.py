@@ -187,8 +187,13 @@ class MARLRacingEnv(ParallelEnv):
                 steer = float(np.tanh(actions[agent][0]))
                 throttle = float(np.tanh(actions[agent][1]))
 
-                gas = max(throttle, 0.0)
-                brake = max(-throttle, 0.0)
+                # Stage 1
+                gas = (throttle + 1.0) / 2.0
+                brake = 0.0
+
+                # Stage 2
+                # gas = max(throttle, 0.0)
+                # brake = max(-throttle, 0.0)
 
                 self.CARS[agent].steer(steer)
                 self.CARS[agent].gas(gas)
