@@ -62,7 +62,11 @@ def main():
             use_gae=True,
             clip_param=0.2,
             grad_clip=0.5,
-            entropy_coeff=0.1,
+            # Start with entropy 0.1 at timestep 0, decay to 0.01 by 500k timesteps
+            entropy_coeff_schedule = [
+                [0, 0.1],
+                [500000, 0.01]
+            ],
             vf_loss_coeff=0.25,
             num_epochs=10,
         )
