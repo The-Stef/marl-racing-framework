@@ -187,13 +187,8 @@ class MARLRacingEnv(ParallelEnv):
                 steer = float(np.tanh(actions[agent][0]))
                 throttle = float(np.tanh(actions[agent][1]))
 
-                # Stage 1
-                gas = (throttle + 1.0) / 2.0
-                brake = 0.0
-
-                # Stage 2
-                # gas = max(throttle, 0.0)
-                # brake = max(-throttle, 0.0)
+                gas = max(throttle, 0.0)
+                brake = max(-throttle, 0.0)
 
                 self.CARS[agent].steer(steer)
                 self.CARS[agent].gas(gas)
@@ -226,7 +221,7 @@ class MARLRacingEnv(ParallelEnv):
 
                 # If the car crashes by going off-track
                 if abs(compute_radial_error(self, agent)) > self.TRACK_HALF_WIDTH:
-                    rewards[agent] -= incomplete_lap_penalty(self, agent)
+                    # rewards[agent] -= incomplete_lap_penalty(self, agent)
                     terminations[agent] = True
                     done_reasons[agent] = "car_crash"
                     continue
@@ -254,7 +249,7 @@ class MARLRacingEnv(ParallelEnv):
             if self.STEPS >= self.MAX_STEPS:
                 for agent in live_agents:
                     if not terminations[agent]:
-                        rewards[agent] -= incomplete_lap_penalty(self, agent)
+                        # rewards[agent] -= incomplete_lap_penalty(self, agent)
                         truncations[agent] = True
                         done_reasons[agent] = "timeout"
                 break

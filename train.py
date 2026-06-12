@@ -62,7 +62,7 @@ def main():
             use_gae=True,
             clip_param=0.2,
             grad_clip=0.5,
-            entropy_coeff=0.01,
+            entropy_coeff=0.1,
             vf_loss_coeff=0.25,
             num_epochs=10,
         )
@@ -82,8 +82,8 @@ def main():
 
     tune.run(
         "PPO",
-        name="PPO",
-        stop={"timesteps_total": 600_000 if not os.environ.get("CI") else 50000},
+        name="PPO_ent01_2",
+        stop={"timesteps_total": 1_000_000 if not os.environ.get("CI") else 50000},
         checkpoint_freq=10,
         storage_path=storage_uri,
         config=config.to_dict(),
