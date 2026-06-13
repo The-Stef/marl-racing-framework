@@ -256,15 +256,13 @@ class MARLRacingEnv(ParallelEnv):
                     # Reset tile rewards for the new lap
                     self.VISITED_TILES[agent] = {current_tile(self, agent)}
 
-                    #TODO - does this fixed lap # logic stay the same for multi-agent settings?
-                    # # Fixed-lap mode, e.g. MAX_LAPS = 1
-                    # if self.MAX_LAPS is not None and self.LAP_COUNT >= self.MAX_LAPS:
-                    #     terminated = True
-                    #     done_reason = "max_laps_reached"
-                    #     break
-
-                    # Endurance mode: lap completed, but episode continues
-                    done_reasons[agent] = "not_done"
+                    # Fixed-lap mode, e.g. MAX_LAPS = 1
+                    if self.MAX_LAPS is not None and self.LAP_COUNT[agent] >= self.MAX_LAPS:
+                        terminations[agent] = True
+                        done_reasons[agent] = "max_laps_reached"
+                    else:
+                        # Endurance mode: lap completed, but episode continues
+                        done_reasons[agent] = "not_done"
 
             # If the episode is taking too long
             if self.STEPS >= self.MAX_STEPS:
