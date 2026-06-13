@@ -127,6 +127,7 @@ class MARLRacingEnv(ParallelEnv):
                 car_start_position_x,
                 car_start_position_y,
             )
+            self.CARS[agent].hull.userData['agent'] = agent
 
         for i, agent in enumerate(self.agents):
             # Set up each prev_theta
@@ -197,6 +198,26 @@ class MARLRacingEnv(ParallelEnv):
                 self.CARS[agent].step(self.DT)
 
             self.WORLD.Step(self.DT, 6, 2)
+
+            # Box2D Collision Penalty
+            for contact in self.WORLD.contacts:
+                if contact.touching:
+                    u1 = contact.fixtureA.body.userData
+                    u2 = contact.fixtureB.body.userData
+                    if isinstance(u1, dict) and u1.get('type') == 'hull' and \
+                       isinstance(u2, dict) and u2.get('type') == 'hull':
+                        a1 = u1.get('agent')
+                        a2 = u2.get('agent')
+                        if a1 in rewards and a2 in rewards:
+                            # Apply penalty to both agents if they are still live
+                            if not terminations[a1] and not truncations[a1]:
+                                rewards[a1] -= cfg.COLLISION_PENALTY / self.ACTION_REPEAT
+                                terminations[a1] = True
+                                done_reasons[a1] = "collision"
+                            if not terminations[a2] and not truncations[a2]:
+                                rewards[a2] -= cfg.COLLISION_PENALTY / self.ACTION_REPEAT
+                                terminations[a2] = True
+                                done_reasons[a2] = "collision"
 
             for agent in live_agents:
                 if terminations[agent] or truncations[agent]:

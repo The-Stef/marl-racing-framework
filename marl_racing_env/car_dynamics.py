@@ -138,6 +138,11 @@ class Car:
         self.drawlist = self.wheels + [self.hull]
         self.particles = []
 
+        # Store agent name in user data for collision detection
+        # Note: 'agent' will be passed during initialization if we modify it, 
+        # but for now we'll set it in the environment after creation.
+        self.hull.userData = {'type': 'hull', 'agent': None}
+
     def gas(self, gas):
         """control: rear-wheel drive
 

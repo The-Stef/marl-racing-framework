@@ -26,6 +26,7 @@ ANGULAR_VELOCITY_WEIGHT = 0.02
 OFF_TRACK_PENALTY = 100.0
 LAP_BONUS = 1000.0
 INCOMPLETE_LAP_PENALTY = 20.0
+COLLISION_PENALTY = 100.0
 
 # Set to a number n for n laps max, None for endurance mode
 MAX_LAPS = None
