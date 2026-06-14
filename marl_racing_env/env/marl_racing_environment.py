@@ -114,11 +114,17 @@ class MARLRacingEnv(ParallelEnv):
         self.LAP_COUNT = {}
         self.VISITED_TILES = {}
 
-        # Assign random positions for agents each time they spawn
+        # Randomly order agents for training
         shuffled_agents = self.agents[:]
         self.np_random.shuffle(shuffled_agents)
+
+        # Randomly position agents on track
+        cars_per_row = int(self.np_random.choice([1, 2], p=[0.9, 0.1]))
+        lateral_spacing = float(self.np_random.uniform(1.0, 3.5))
+        longitudinal_spacing = float(self.np_random.uniform(3.0, 12.0))
+
         for i, agent in enumerate(shuffled_agents):
-            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, i)
+            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, i, cars_per_row, lateral_spacing, longitudinal_spacing)
 
             # Set up each car
             self.CARS[agent] = Car(

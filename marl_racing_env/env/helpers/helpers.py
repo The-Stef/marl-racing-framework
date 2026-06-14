@@ -77,12 +77,15 @@ def compute_radial_error(env, agent):
     )
     return distance_from_center - env.TRACK_RADIUS
 
-def compute_car_start_pose(env, agent, idx):
+def compute_car_start_pose(
+        env,
+        agent,
+        idx,
+        cars_per_row = 1,
+        lateral_spacing = 2.5,
+        longitudinal_spacing = 12.0
+):
     """Compute the car's starting position and heading on the circular track."""
-
-    cars_per_row = 1
-    lateral_spacing = 2.5
-    longitudinal_spacing = 12.0
 
     row = idx // cars_per_row
     col = idx % cars_per_row
