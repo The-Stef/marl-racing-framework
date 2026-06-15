@@ -55,7 +55,7 @@ def main():
         )
         .env_runners(num_env_runners=4, rollout_fragment_length=128)
         .training(
-            train_batch_size=2048,
+            train_batch_size=4096,
             lr=1e-4,
             gamma=0.99,
             lambda_=0.95,
@@ -65,7 +65,8 @@ def main():
             # Start with entropy 0.1 at timestep 0, decay to 0.01 by 500k timesteps
             entropy_coeff_schedule = [
                 [0, 0.1],
-                [1_000_000, 0.01]
+                [500_000, 0.01],
+                [1_000_000, 0.001]
             ],
             vf_loss_coeff=0.25,
             num_epochs=10,
@@ -86,7 +87,7 @@ def main():
 
     tune.run(
         "PPO",
-        name="PPO_Spwnmix_T2",
+        name="PPO_Spwnmix_T3",
         stop={"timesteps_total": 3_000_000 if not os.environ.get("CI") else 50000},
         checkpoint_freq=10,
         storage_path=storage_uri,
