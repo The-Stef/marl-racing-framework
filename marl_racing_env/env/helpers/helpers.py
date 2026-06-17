@@ -190,7 +190,7 @@ def compute_distance_to_other_agent(env, agent):
     ]
 
     if not other_agents:
-        return 0.0
+        return 1.0
 
     other_pos = env.CARS[other_agents[0]].hull.position
 
