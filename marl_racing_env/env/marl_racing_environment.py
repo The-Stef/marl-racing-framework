@@ -8,25 +8,10 @@ import gymnasium as gym
 import numpy as np
 import pygame
 from gymnasium import spaces
-
-# from ...env.car_dynamics import Car
-# from ...env.rendering import render_env
-# from ...env.rewards import compute_reward
-
 from ..car_dynamics import Car
-
-# from ...env.track import (
-#     wrap_angle,
-#     car_heading,
-#     compute_radial_error,
-#     compute_desired_direction,
-#     tangential_velocity,
-#     current_tile,
-#     populate_dictionary_with_info
-# )
 from configs import default as cfg
 
-from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, incomplete_lap_penalty, compute_reward
+from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, compute_reward
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""

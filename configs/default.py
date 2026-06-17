@@ -23,6 +23,7 @@ NEW_TILE_REWARD = 0.01
 OFF_TRACK_PENALTY = 1.0
 LAP_BONUS = 1.0
 COLLISION_PENALTY = 1.0
+GAMMA_DISCOUNT = 0.9995
 
 # Set to a number n for n laps max, None for endurance mode
 MAX_LAPS = None

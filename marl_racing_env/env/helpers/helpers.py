@@ -201,15 +201,6 @@ def compute_distance_to_other_agent(env, agent):
 
     return float(distance / env.TRACK_RADIUS)
 
-def incomplete_lap_penalty(env, agent):
-    """Compute a sparse penalty component for lack of progress along the track."""
-    total_forward_progress = -env.LAP_PROGRESS[agent]
-    current_lap_progress = total_forward_progress - env.LAP_COUNT[agent] * 2 * np.pi
-    current_lap_progress = np.clip(current_lap_progress, 0.0, 2 * np.pi)
-    lap_fraction = current_lap_progress / (2 * np.pi)
-
-    return cfg.INCOMPLETE_LAP_PENALTY * (1.0 - lap_fraction)
-
 def compute_reward(env, agent):
     """Compute reward for the current environment state & current agent."""
     radial_error = compute_radial_error(env, agent)
