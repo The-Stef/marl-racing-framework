@@ -87,7 +87,7 @@ def main():
 
     tune.run(
         "PPO",
-        name="PPO_Spwnmix_T3",
+        name="PPO_OneAgent_T1",
         stop={"timesteps_total": 3_000_000 if not os.environ.get("CI") else 50000},
         checkpoint_freq=10,
         storage_path=storage_uri,
