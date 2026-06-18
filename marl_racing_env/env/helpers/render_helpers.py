@@ -1,5 +1,9 @@
 import pygame
 
+"""
+Helper functions related to rendering the environment are added here.
+"""
+
 def render_env(env):
     """Renders the environment for visual inspection."""
     if env.SCREEN is None:

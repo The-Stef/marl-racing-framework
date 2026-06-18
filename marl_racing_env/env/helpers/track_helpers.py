@@ -1,5 +1,16 @@
 import numpy as np
-from configs import default as cfg
+
+"""
+Helper functions related to the track are added here.
+"""
+
+def wrap_angle(angle):
+    """Wrap angle in [-pi, pi]."""
+    return (angle + np.pi) % (2 * np.pi) - np.pi
+
+def car_heading(env, agent):
+    """Return the current car's real forward heading."""
+    return wrap_angle(float(env.CARS[agent].hull.angle) + np.pi / 2)
 
 def current_tile(env, agent):
     """Return current angular tile index for current agent around the circular track."""
@@ -16,46 +27,6 @@ def current_tile(env, agent):
     # Map position to specific tile
     tile = int(theta / (2 * np.pi) * env.NUM_TILES)
     return tile
-
-def get_obs(env, agent):
-    """Return the agent's observation. Values computed using info straight from the Car object."""
-
-    velocity_x = float(env.CARS[agent].hull.linearVelocity[0])
-    velocity_y = float(env.CARS[agent].hull.linearVelocity[1])
-    velocity = np.sqrt(velocity_x ** 2 + velocity_y ** 2)
-
-    current_direction = car_heading(env, agent)
-    desired_direction = compute_desired_direction(env, agent)
-    heading_error = wrap_angle(desired_direction - current_direction)
-
-    radial_error = np.clip(
-        compute_radial_error(env, agent),
-        -env.TRACK_HALF_WIDTH,
-        env.TRACK_HALF_WIDTH
-    )
-
-    angular_velocity = float(env.CARS[agent].hull.angularVelocity)
-
-    distance_to_other_agent = compute_distance_to_other_agent(env, agent)
-
-    observation = np.array(
-        [velocity, heading_error, radial_error, angular_velocity, distance_to_other_agent],
-        dtype=np.float32
-    )
-
-    return np.clip(
-        observation,
-        env.observation_space(agent).low,
-        env.observation_space(agent).high,
-    )
-
-def wrap_angle(angle):
-    """Wrap angle in [-pi, pi]."""
-    return (angle + np.pi) % (2 * np.pi) - np.pi
-
-def car_heading(env, agent):
-    """Return the current car's real forward heading."""
-    return wrap_angle(float(env.CARS[agent].hull.angle) + np.pi / 2)
 
 def compute_desired_direction(env, agent):
     """Return the tangent direction angle the current car should follow."""
@@ -131,54 +102,3 @@ def tangential_velocity(env, agent):
     vy = env.CARS[agent].hull.linearVelocity[1]
 
     return vx * tx + vy * ty
-
-def compute_distance_to_other_agent(env, agent):
-    """In a two agent setting, get current agent's distance to other agent."""
-    own_pos = env.CARS[agent].hull.position
-
-    other_agents = [
-        other_agent
-        for other_agent in env.CARS.keys()
-        if other_agent != agent
-    ]
-
-    if not other_agents:
-        return 1.0
-
-    other_pos = env.CARS[other_agents[0]].hull.position
-
-    dx = other_pos[0] - own_pos[0]
-    dy = other_pos[1] - own_pos[1]
-
-    distance = np.sqrt(dx ** 2 + dy ** 2)
-
-    return float(distance / env.TRACK_RADIUS)
-
-def compute_reward(env, agent):
-    """Compute reward for the current environment state & current agent."""
-    radial_error = compute_radial_error(env, agent)
-
-    # Check whether car is still on the track
-    on_track = abs(radial_error) <= env.TRACK_HALF_WIDTH
-
-    reward = 0.0
-
-    # Reward exploration, but only while on track
-    tile = current_tile(env, agent)
-    new_tile_reward = 0.0
-
-    if on_track and tile not in env.VISITED_TILES[agent]:
-        env.VISITED_TILES[agent].add(tile)
-        new_tile_reward = cfg.NEW_TILE_REWARD
-
-    reward += new_tile_reward
-
-    # Big crash penalty
-    if not on_track:
-        reward -= cfg.OFF_TRACK_PENALTY
-
-    # Lap bonus
-    if env.LAP_PROGRESS[agent] <= -2 * np.pi * (env.LAP_COUNT[agent] + 1):
-        reward += cfg.GAMMA_DISCOUNT ** env.CURRENT_LAP_STEPS[agent] * cfg.LAP_BONUS
-
-    return reward

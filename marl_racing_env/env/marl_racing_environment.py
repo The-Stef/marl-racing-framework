@@ -1,4 +1,6 @@
-from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, compute_radial_error, compute_reward
+from .helpers.track_helpers import current_tile, compute_radial_error, compute_car_start_pose
+from .helpers.reward_helpers import compute_reward
+from .helpers.observation_helpers import get_obs
 from .helpers.render_helpers import render_env
 from gymnasium.utils import seeding
 from pettingzoo import ParallelEnv
