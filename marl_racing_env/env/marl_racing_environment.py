@@ -1,4 +1,5 @@
-from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, compute_reward
+from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, compute_radial_error, compute_reward
+from .helpers.render_helpers import render_env
 from gymnasium.utils import seeding
 from pettingzoo import ParallelEnv
 from configs import default as cfg
