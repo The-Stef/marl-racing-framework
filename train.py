@@ -1,17 +1,11 @@
-from marl_racing_env import marl_racing_environment_v0
-
-import os
-from pathlib import Path
-
-import ray
-import supersuit as ss
-from ray import tune
-from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
-from ray.rllib.models import ModelCatalog
-from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+from marl_racing_env import marl_racing_environment_v0
+from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.registry import register_env
-from torch import nn
+from pathlib import Path
+from ray import tune
+import ray
+import os
 
 def get_obs_act_spaces():
     temp_env = marl_racing_environment_v0.parallel_env(render_mode=None)
