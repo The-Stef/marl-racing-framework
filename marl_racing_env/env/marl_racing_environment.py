@@ -47,6 +47,7 @@ class MARLRacingEnv(ParallelEnv):
         # Steps
         self.STEPS = 0
         self.MAX_STEPS = cfg.MAX_STEPS
+        self.CURRENT_LAP_STEPS = {}
 
         # Track
         self.TRACK_RADIUS = cfg.TRACK_RADIUS
@@ -98,6 +99,7 @@ class MARLRacingEnv(ParallelEnv):
         self.LAP_PROGRESS = {}
         self.LAP_COUNT = {}
         self.VISITED_TILES = {}
+        self.CURRENT_LAP_STEPS = {}
 
         # Randomly order agents for training
         shuffled_agents = self.agents[:]
@@ -133,6 +135,8 @@ class MARLRacingEnv(ParallelEnv):
             # Set up each agent's lap count
             self.LAP_COUNT[agent] = 0
 
+            self.CURRENT_LAP_STEPS[agent] = 0
+
             self.VISITED_TILES[agent] = {current_tile(self, agent)}
 
         # the observations should be numpy arrays even if there is only one value
@@ -160,9 +164,6 @@ class MARLRacingEnv(ParallelEnv):
         # Rewards for all agents are placed in the rewards dictionary to be returned
         rewards = {agent: 0.0 for agent in live_agents}
 
-        # Same for the observations
-        observations = {}
-
         terminations = {agent: False for agent in live_agents}
         truncations = {agent: False for agent in live_agents}
         done_reasons = {agent: "not_done" for agent in live_agents}
@@ -173,6 +174,7 @@ class MARLRacingEnv(ParallelEnv):
             self.STEPS += 1
 
             for agent in live_agents:
+                self.CURRENT_LAP_STEPS[agent] += 1
                 if terminations[agent] or truncations[agent]:
                     continue
 
@@ -242,6 +244,7 @@ class MARLRacingEnv(ParallelEnv):
 
                 if self.LAP_PROGRESS[agent] <= next_lap_target[agent]:
                     self.LAP_COUNT[agent] += 1
+                    self.CURRENT_LAP_STEPS[agent] = 0
 
                     # Reset tile rewards for the new lap
                     self.VISITED_TILES[agent] = {current_tile(self, agent)}

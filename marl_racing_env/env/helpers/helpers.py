@@ -226,6 +226,6 @@ def compute_reward(env, agent):
 
     # Lap bonus
     if env.LAP_PROGRESS[agent] <= -2 * np.pi * (env.LAP_COUNT[agent] + 1):
-        reward += cfg.LAP_BONUS
+        reward += cfg.GAMMA_DISCOUNT ** env.CURRENT_LAP_STEPS[agent] * cfg.LAP_BONUS
 
     return reward
