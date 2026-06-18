@@ -53,7 +53,10 @@ def main():
             policy_mapping_fn=lambda agent_id, *args, **kwargs: "shared_policy",
             policies_to_train=None,
         )
-        .env_runners(num_env_runners=4, rollout_fragment_length=128)
+        .env_runners(
+            num_env_runners=4,
+            num_envs_per_env_runner=4,
+            rollout_fragment_length=128)
         .training(
             train_batch_size=4096,
             lr=1e-4,
