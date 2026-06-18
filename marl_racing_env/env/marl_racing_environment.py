@@ -1,17 +1,12 @@
-import functools
-import random
-
+from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, compute_reward
 from gymnasium.utils import seeding
 from pettingzoo import ParallelEnv
-import Box2D
-import gymnasium as gym
-import numpy as np
-import pygame
-from gymnasium import spaces
-from ..car_dynamics import Car
 from configs import default as cfg
-
-from .helpers.helpers import current_tile, get_obs, compute_car_start_pose, render_env, compute_radial_error, compute_reward
+from ..car_dynamics import Car
+from gymnasium import spaces
+import numpy as np
+import functools
+import Box2D
 
 class MARLRacingEnv(ParallelEnv):
     """Multi Agent version of the SimpleRacingEnv."""
