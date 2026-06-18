@@ -1,13 +1,11 @@
-from marl_racing_env import marl_racing_environment_v0
-
-import argparse
-import os
-import numpy as np
-
-import ray
-from ray.rllib.algorithms.ppo import PPO
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
+from marl_racing_env import marl_racing_environment_v0
 from ray.tune.registry import register_env
+from ray.rllib.algorithms.ppo import PPO
+import numpy as np
+import argparse
+import ray
+import os
 
 ENV_NAME = "marl_racing_environment_v0"
 
