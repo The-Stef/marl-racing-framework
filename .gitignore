@@ -3,6 +3,4 @@ __pycache__/
 *.pyc
 .env
 venv/
-powerpoints/
 artifacts/
-old_info_dictionary_prep.py
