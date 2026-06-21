@@ -28,6 +28,14 @@ def current_tile(env, agent):
     tile = int(theta / (2 * np.pi) * env.NUM_TILES)
     return tile
 
+def current_tile_lane(env, agent):
+    """Break the angular tile into two, lane-based tiles."""
+    angular_tile = current_tile(env, agent)
+    radial_error = compute_radial_error(env, agent)
+    lane = 0 if radial_error < 0.0 else 1
+
+    return angular_tile * 2 + lane
+
 def compute_desired_direction(env, agent):
     """Return the tangent direction angle the current car should follow."""
     rx = env.CARS[agent].hull.position[0] - env.TRACK_CENTER_X

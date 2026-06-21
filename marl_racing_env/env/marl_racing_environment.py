@@ -1,4 +1,4 @@
-from .helpers.track_helpers import current_tile, compute_radial_error, compute_car_start_pose
+from .helpers.track_helpers import current_tile_lane, compute_radial_error, compute_car_start_pose
 from .helpers.reward_helpers import compute_reward
 from .helpers.observation_helpers import get_obs
 from .helpers.render_helpers import render_env
@@ -86,7 +86,7 @@ class MARLRacingEnv(ParallelEnv):
             self.LAP_PROGRESS[agent] = 0.0
             self.LAP_COUNT[agent] = 0
             self.CURRENT_LAP_STEPS[agent] = 0
-            self.VISITED_TILES[agent] = {current_tile(self, agent)}
+            self.VISITED_TILES[agent] = {current_tile_lane(self, agent)}
 
     def _set_variables_from_config(self):
         """Initialize variables with values from a config file."""
@@ -349,7 +349,7 @@ class MARLRacingEnv(ParallelEnv):
                     self.CURRENT_LAP_STEPS[agent] = 0
 
                     # Reset tile rewards for the new lap
-                    self.VISITED_TILES[agent] = {current_tile(self, agent)}
+                    self.VISITED_TILES[agent] = {current_tile_lane(self, agent)}
 
                     # Fixed-lap mode, e.g. MAX_LAPS = 1
                     if self.MAX_LAPS is not None and self.LAP_COUNT[agent] >= self.MAX_LAPS:

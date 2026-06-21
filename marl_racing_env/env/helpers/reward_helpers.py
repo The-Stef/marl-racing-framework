@@ -1,4 +1,4 @@
-from .track_helpers import compute_radial_error, current_tile
+from .track_helpers import compute_radial_error, current_tile_lane
 from configs import default as cfg
 import numpy as np
 
@@ -16,7 +16,7 @@ def compute_reward(env, agent):
     reward = 0.0
 
     # Reward exploration, but only while on track
-    tile = current_tile(env, agent)
+    tile = current_tile_lane(env, agent)
     new_tile_reward = 0.0
 
     if on_track and tile not in env.VISITED_TILES[agent]:
