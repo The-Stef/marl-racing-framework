@@ -94,10 +94,14 @@ class MARLRacingEnv(ParallelEnv):
         self.DT = 1.0 / self.PHYSICS_FPS  # Sole exception
 
         self.ACTION_REPEAT = cfg.ACTION_REPEAT
+        self.LIDAR_FOV = cfg.LIDAR_FOV
+        self.LIDAR_MAX_DISTANCE = cfg.LIDAR_MAX_DISTANCE
+        self.LIDAR_NUM_RAYS = cfg.LIDAR_NUM_RAYS
         self.MAX_LAPS = cfg.MAX_LAPS
         self.MAX_SPEED = cfg.MAX_SPEED
         self.MAX_STEPS = cfg.MAX_STEPS
         self.NUM_TILES = cfg.NUM_TILES
+        self.OPPONENT_DETECTION_RADIUS = cfg.OPPONENT_DETECTION_RADIUS
         self.SCREEN_SIZE = cfg.SCREEN_SIZE
         self.START_DIRECTION = cfg.START_DIRECTION
         self.TRACK_CENTER_X = cfg.TRACK_CENTER_X
@@ -411,11 +415,11 @@ class MARLRacingEnv(ParallelEnv):
         # Speed, Heading error, Radial error, angular velocity
         return spaces.Box(
             low=np.array(
-                [0.0, -np.pi, -self.TRACK_HALF_WIDTH, -20.0, 0.0],
+                [0.0, -np.pi, -self.TRACK_HALF_WIDTH, -20.0] + [0.0] * self.LIDAR_NUM_RAYS,
                 dtype=np.float32
             ),
             high=np.array(
-                [self.MAX_SPEED, np.pi, self.TRACK_HALF_WIDTH, 20.0, 4.0],
+                [self.MAX_SPEED, np.pi, self.TRACK_HALF_WIDTH, 20.0] + [1.0] * self.LIDAR_NUM_RAYS,
                 dtype=np.float32
             ),
             dtype=np.float32

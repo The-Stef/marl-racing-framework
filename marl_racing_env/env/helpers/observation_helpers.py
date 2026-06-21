@@ -1,4 +1,5 @@
 from .track_helpers import car_heading, compute_desired_direction, wrap_angle, compute_radial_error
+from configs import default as cfg
 import numpy as np
 
 """
@@ -24,11 +25,16 @@ def get_obs(env, agent):
 
     angular_velocity = float(env.CARS[agent].hull.angularVelocity)
 
-    distance_to_other_agent = compute_distance_to_other_agent(env, agent)
+    lidar = compute_lidar(env, agent)
 
-    observation = np.array(
-        [velocity, heading_error, radial_error, angular_velocity, distance_to_other_agent],
-        dtype=np.float32
+    observation = np.concatenate(
+        [
+            np.array(
+                [velocity, heading_error, radial_error, angular_velocity],
+                dtype=np.float32
+            ),
+            lidar,
+        ]
     )
 
     return np.clip(
@@ -58,3 +64,87 @@ def compute_distance_to_other_agent(env, agent):
     distance = np.sqrt(dx ** 2 + dy ** 2)
 
     return float(distance / env.TRACK_RADIUS)
+
+def compute_lidar(env, agent):
+    """Cast LIDAR rays out from agent to check distance from border or other agents."""
+    own_pos = env.CARS[agent].hull.position
+    heading = car_heading(env, agent)
+
+    ray_angles = np.linspace(
+        0.0,
+        env.LIDAR_FOV,
+        env.LIDAR_NUM_RAYS,
+        endpoint=False,
+    )
+
+    distances = []
+
+    for relative_angle in ray_angles:
+        # Get ray orientation & directional vector from angle
+        angle = heading + relative_angle
+        direction = np.array([np.cos(angle), np.sin(angle)], dtype=np.float32)
+
+        nearest = env.LIDAR_MAX_DISTANCE
+
+        # Track borders
+        inner_radius = env.TRACK_RADIUS - env.TRACK_HALF_WIDTH
+        outer_radius = env.TRACK_RADIUS + env.TRACK_HALF_WIDTH
+
+        # Check if LIDAR rays are hitting the borders
+        for radius in [inner_radius, outer_radius]:
+            border_distance_hit = ray_circle_distance(
+                origin=own_pos,
+                direction=direction,
+                center=np.array([env.TRACK_CENTER_X, env.TRACK_CENTER_Y], dtype=np.float32),
+                radius=radius,
+            )
+
+            if border_distance_hit is not None:
+                nearest = min(nearest, border_distance_hit)
+
+        # Opponent cars, approximated as circles
+        for other_agent, other_car in env.CARS.items():
+            if other_agent == agent:
+                continue
+
+            other_pos = np.array(other_car.hull.position, dtype=np.float32)
+
+            opponent_distance_hit = ray_circle_distance(
+                origin=own_pos,
+                direction=direction,
+                center=other_pos,
+                radius=env.OPPONENT_DETECTION_RADIUS,
+            )
+
+            if opponent_distance_hit is not None:
+                nearest = min(nearest, opponent_distance_hit)
+
+        distances.append(nearest / env.LIDAR_MAX_DISTANCE)
+
+    return np.array(distances, dtype=np.float32)
+
+def ray_circle_distance(origin, direction, center, radius):
+    """Return the closest positive distance where a ray intersects a circle. Used for LIDAR checks against circular track borders and circular
+approximations of opponent agents. Returns ``None`` if the ray does not hit the circle."""
+    offset = origin - center
+
+    a = np.dot(direction, direction)
+    b = 2.0 * np.dot(offset, direction)
+    c = np.dot(offset, offset) - radius ** 2
+
+    discriminant = b ** 2 - 4 * a * c
+
+    if discriminant < 0:
+        return None
+
+    sqrt_disc = np.sqrt(discriminant)
+
+    t1 = (-b - sqrt_disc) / (2 * a)
+    t2 = (-b + sqrt_disc) / (2 * a)
+
+    candidates = [t for t in [t1, t2] if 0.0 <= t <= 1e9]
+
+    if not candidates:
+        return None
+
+    return min(candidates)
