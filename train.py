@@ -37,7 +37,8 @@ def main():
         PPOConfig()
         .environment(
             env=env_name,
-            clip_actions=False,
+            clip_actions=True,
+            normalize_actions=True,
             disable_env_checking=True,
         )
         .multi_agent(
@@ -48,9 +49,9 @@ def main():
             policies_to_train=None,
         )
         .env_runners(
-            num_env_runners=4,
+            num_env_runners=6,
             num_envs_per_env_runner=4,
-            rollout_fragment_length=128)
+            rollout_fragment_length="auto")
         .training(
             train_batch_size=4096,
             lr=1e-4,
@@ -59,12 +60,14 @@ def main():
             use_gae=True,
             clip_param=0.2,
             grad_clip=0.5,
-            # Start with entropy 0.1 at timestep 0, decay to 0.01 by 500k timesteps
-            entropy_coeff_schedule = [
-                [0, 0.1],
-                [500_000, 0.01],
-                [1_000_000, 0.001]
+            entropy_coeff_schedule=[
+                [0, 0.005],
+                [1_000_000, 0.001],
+                [3_000_000, 0.0],
             ],
+            model={
+                "free_log_std": True,
+            },
             vf_loss_coeff=0.25,
             num_epochs=10,
         )
@@ -84,7 +87,7 @@ def main():
 
     tune.run(
         "PPO",
-        name="PPO_OneAgent_T2",
+        name="PPO_LIDAR_T5",
         stop={"timesteps_total": 3_000_000 if not os.environ.get("CI") else 50000},
         checkpoint_freq=10,
         storage_path=storage_uri,

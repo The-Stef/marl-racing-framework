@@ -53,6 +53,7 @@ class MARLRacingEnv(ParallelEnv):
         """Clear dictionaries that hold per-agent data."""
         self.CARS = {}
         self.PREV_THETA = {}
+        self.LAST_D_THETA = {}
         self.LAP_PROGRESS = {}
         self.LAP_COUNT = {}
         self.VISITED_TILES = {}
@@ -83,7 +84,8 @@ class MARLRacingEnv(ParallelEnv):
                 self.CARS[agent].hull.position[0] - self.TRACK_CENTER_X,
             )
 
-            self.LAP_PROGRESS[agent] = 0.0
+            self.LAP_PROGRESS[agent] = np.float32(0.0)
+            self.LAST_D_THETA[agent] = np.float32(0.0)
             self.LAP_COUNT[agent] = 0
             self.CURRENT_LAP_STEPS[agent] = 0
             self.VISITED_TILES[agent] = {current_tile_lane(self, agent)}
@@ -94,6 +96,7 @@ class MARLRacingEnv(ParallelEnv):
         self.DT = 1.0 / self.PHYSICS_FPS  # Sole exception
 
         self.ACTION_REPEAT = cfg.ACTION_REPEAT
+        self.HEADING_ERROR_PENALTY = cfg.HEADING_ERROR_PENALTY
         self.LIDAR_FOV = cfg.LIDAR_FOV
         self.LIDAR_MAX_DISTANCE = cfg.LIDAR_MAX_DISTANCE
         self.LIDAR_NUM_RAYS = cfg.LIDAR_NUM_RAYS
@@ -186,8 +189,9 @@ class MARLRacingEnv(ParallelEnv):
         elif d_theta < -np.pi:
             d_theta += 2 * np.pi
 
-        self.LAP_PROGRESS[agent] += d_theta
-        self.PREV_THETA[agent] = theta
+        self.LAST_D_THETA[agent] = np.float32(d_theta)
+        self.LAP_PROGRESS[agent] = np.float32(self.LAP_PROGRESS[agent] + d_theta)
+        self.PREV_THETA[agent] = np.float32(theta)
 
     def _build_observations(self, agent_container):
         """

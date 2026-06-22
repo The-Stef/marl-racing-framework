@@ -35,13 +35,13 @@ def get_obs(env, agent):
             ),
             lidar,
         ]
-    )
+    ).astype(np.float32)
 
     return np.clip(
         observation,
         env.observation_space(agent).low,
         env.observation_space(agent).high,
-    )
+    ).astype(np.float32)
 
 def compute_distance_to_other_agent(env, agent):
     """In a two agent setting, get current agent's distance to other agent."""
