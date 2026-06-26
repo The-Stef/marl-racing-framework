@@ -68,7 +68,7 @@ class MARLRacingEnv(ParallelEnv):
         :param longitudinal_spacing: Longitudinal spacing of the agents.
         """
         for idx, agent in enumerate(agent_container):
-            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, idx, cars_per_row, lateral_spacing, longitudinal_spacing)
+            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, idx)
 
             self.CARS[agent] = Car(
                 self.WORLD,

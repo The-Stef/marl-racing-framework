@@ -59,42 +59,75 @@ def compute_car_start_pose(
         env,
         agent,
         idx,
-        cars_per_row = 1,
-        lateral_spacing = 2.5,
-        longitudinal_spacing = 12.0
+        start_theta=np.pi,
+        centerline_offset=0.0,
+        lateral_spacing=2.25,
+        longitudinal_spacing=3.0,
+        orientation_offset=0.0,
 ):
-    """Compute the car's starting position and heading on the circular track."""
+    """
+    Compute start position and heading for:
+    - 1 agent: centered on the track centerline
+    - 2 agents: side-by-side
+    - 3+ agents: two-column grid, with each row following the circular centerline
+    """
 
-    row = idx // cars_per_row
-    col = idx % cars_per_row
+    num_agents = env.NUM_AGENTS
 
-    start_theta = np.pi
+    if num_agents == 1:
+        cars_per_row = 1
+        row = 0
+        lateral_offset = 0.0
 
-    # Move row along the circular track
-    theta_offset = row * longitudinal_spacing / env.TRACK_RADIUS
-    theta = start_theta + theta_offset
+    elif num_agents == 2:
+        cars_per_row = 2
+        row = 0
 
-    # Radial direction at this theta
-    radial_x = np.cos(theta)
-    radial_y = np.sin(theta)
+        if idx == 0:
+            lateral_offset = -lateral_spacing / 2.0
+        else:
+            lateral_offset = lateral_spacing / 2.0
+
+    else:
+        cars_per_row = 2
+
+        row = idx // cars_per_row
+        col = idx % cars_per_row
+
+        agents_before_row = row * cars_per_row
+        agents_in_this_row = min(cars_per_row, num_agents - agents_before_row)
+
+        # Center each row.
+        # Two cars: -spacing/2, +spacing/2
+        # One car: 0
+        lateral_offset = (col - 0.5) * lateral_spacing
+
+    # Each row moves along the circular centerline, not backward along a straight tangent.
+    theta = start_theta + (centerline_offset + row * longitudinal_spacing) / env.TRACK_RADIUS
 
     # Centerline point for this row
     centerline_x = env.TRACK_CENTER_X + env.TRACK_RADIUS * np.cos(theta)
     centerline_y = env.TRACK_CENTER_Y + env.TRACK_RADIUS * np.sin(theta)
 
-    # Side-by-side lane placement
-    lateral_offset = (col - 0.5) * lateral_spacing
+    # Radial direction = sideways from track center
+    radial_x = np.cos(theta)
+    radial_y = np.sin(theta)
 
-    x = centerline_x + lateral_offset * radial_x
-    y = centerline_y + lateral_offset * radial_y
-
-    # Tangent direction = forward direction along the circle
+    # Tangent direction = forward direction along circular track
     tangent_x = np.sin(theta)
     tangent_y = -np.cos(theta)
 
-    start_direction = np.arctan2(-tangent_x, tangent_y)
+    # Apply lateral offset from centerline
+    x = centerline_x + lateral_offset * radial_x
+    y = centerline_y + lateral_offset * radial_y
 
-    return x, y, start_direction
+    # Proper heading for this point on the circular track
+    agent_orientation = np.arctan2(-tangent_x, tangent_y)
+
+    # Optional heading offset
+    agent_orientation += orientation_offset
+
+    return x, y, agent_orientation
 
 def tangential_velocity(env, agent):
     """Project car velocity onto the clockwise tangent direction."""

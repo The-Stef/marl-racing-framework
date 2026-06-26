@@ -43,8 +43,6 @@ def main():
         for agent in env.possible_agents
     }
 
-    step_count = 0
-
     while env.agents:
         actions = {}
 
@@ -63,19 +61,6 @@ def main():
             actions[agent] = action
 
         observations, rewards, terminations, truncations, infos = env.step(actions)
-
-        if step_count <= 20:
-            print("step", step_count)
-            print("actions:", actions)
-            print("observations:", observations)
-            print("rewards:", rewards)
-            print("terminations:", terminations)
-            print("truncations:", truncations)
-            print("infos:", infos)
-            print("lap progress:", env.LAP_PROGRESS)
-            print()
-
-        step_count += 1
 
         for agent, reward in rewards.items():
             reward_sums[agent] += float(reward)
