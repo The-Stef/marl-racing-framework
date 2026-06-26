@@ -61,70 +61,82 @@ def compute_car_start_pose(
         idx,
         start_theta=np.pi,
         centerline_offset=0.0,
+        lateral_offset=0.0,
         lateral_spacing=2.25,
         longitudinal_spacing=3.0,
         orientation_offset=0.0,
 ):
     """
-    Compute start position and heading for:
-    - 1 agent: centered on the track centerline
-    - 2 agents: side-by-side
-    - 3+ agents: two-column grid, with each row following the circular centerline
+    Start placement logic:
+    - 1 agent: start from one default centerline point, then apply offsets
+    - 2 agents: start side-by-side around that centerline point
+    - 3+ agents: use a two-column grid, with rows placed along the circular track
     """
 
-    num_agents = env.NUM_AGENTS
+    num_agents = getattr(env, "NUM_AGENTS", None)
+    if num_agents is None:
+        num_agents = env.num_agents
+
+    # Default centerline point is controlled by theta.
+    # centerline_offset moves the formation forward/backward along the circular centerline.
+    base_theta = start_theta + centerline_offset / env.TRACK_RADIUS
 
     if num_agents == 1:
-        cars_per_row = 1
         row = 0
-        lateral_offset = 0.0
+
+        # One agent starts on the centerline, plus optional lateral offset.
+        agent_lateral_offset = lateral_offset
 
     elif num_agents == 2:
-        cars_per_row = 2
         row = 0
 
+        # Two agents start side-by-side in separate lanes.
         if idx == 0:
-            lateral_offset = -lateral_spacing / 2.0
+            agent_lateral_offset = -lateral_spacing / 2.0
         else:
-            lateral_offset = lateral_spacing / 2.0
+            agent_lateral_offset = lateral_spacing / 2.0
+
+        # Optional shared lateral shift for the whole pair.
+        agent_lateral_offset += lateral_offset
 
     else:
+        # 3+ agents use a two-column grid.
         cars_per_row = 2
 
         row = idx // cars_per_row
         col = idx % cars_per_row
 
-        agents_before_row = row * cars_per_row
-        agents_in_this_row = min(cars_per_row, num_agents - agents_before_row)
+        # Fixed two-column placement:
+        # col 0 -> left lane
+        # col 1 -> right lane
+        agent_lateral_offset = (col - 0.5) * lateral_spacing
 
-        # Center each row.
-        # Two cars: -spacing/2, +spacing/2
-        # One car: 0
-        lateral_offset = (col - 0.5) * lateral_spacing
+        # Optional shared lateral shift for the whole grid.
+        agent_lateral_offset += lateral_offset
 
-    # Each row moves along the circular centerline, not backward along a straight tangent.
-    theta = start_theta + (centerline_offset + row * longitudinal_spacing) / env.TRACK_RADIUS
+    # For grid rows, move each row further along the circular centerline.
+    theta = base_theta + row * longitudinal_spacing / env.TRACK_RADIUS
 
-    # Centerline point for this row
+    # Default centerline point at this theta
     centerline_x = env.TRACK_CENTER_X + env.TRACK_RADIUS * np.cos(theta)
     centerline_y = env.TRACK_CENTER_Y + env.TRACK_RADIUS * np.sin(theta)
 
-    # Radial direction = sideways from track center
+    # Radial direction = left/right from centerline
     radial_x = np.cos(theta)
     radial_y = np.sin(theta)
 
-    # Tangent direction = forward direction along circular track
+    # Tangent direction = forward direction along track
     tangent_x = np.sin(theta)
     tangent_y = -np.cos(theta)
 
-    # Apply lateral offset from centerline
-    x = centerline_x + lateral_offset * radial_x
-    y = centerline_y + lateral_offset * radial_y
+    # Apply lateral offset
+    x = centerline_x + agent_lateral_offset * radial_x
+    y = centerline_y + agent_lateral_offset * radial_y
 
-    # Proper heading for this point on the circular track
+    # Correct orientation for this point on the track
     agent_orientation = np.arctan2(-tangent_x, tangent_y)
 
-    # Optional heading offset
+    # Optional orientation noise / offset
     agent_orientation += orientation_offset
 
     return x, y, agent_orientation
