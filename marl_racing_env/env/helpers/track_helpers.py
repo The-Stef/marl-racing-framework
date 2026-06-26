@@ -71,13 +71,16 @@ def compute_car_start_pose(
     - 1 agent: start from one default centerline point, then apply offsets
     - 2 agents: start side-by-side around that centerline point
     - 3+ agents: use a two-column grid, with rows placed along the circular track
+    :param centerline_offset: Centerline offset for agents.
+    :param lateral_offset: Lateral offset for agents.
+    :param orientation_offset: Orientation offset for agents.
     """
 
     num_agents = getattr(env, "NUM_AGENTS", None)
     if num_agents is None:
         num_agents = env.num_agents
 
-    # Default centerline point is controlled by theta.
+    # Theta controls default centerline point.
     # centerline_offset moves the formation forward/backward along the circular centerline.
     base_theta = start_theta + centerline_offset / env.TRACK_RADIUS
 

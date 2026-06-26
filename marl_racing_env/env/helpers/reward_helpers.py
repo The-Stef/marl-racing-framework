@@ -38,8 +38,15 @@ def compute_reward(env, agent):
     if not on_track:
         reward -= cfg.OFF_TRACK_PENALTY
 
-    # Lap bonus
+    # Time importance weight
+    time_importance = min(1.0, env.CURRICULUM_STEPS / 125_000)
+
+    # Lap bonus with dynamically growing importance
     if env.LAP_PROGRESS[agent] <= -2 * np.pi * (env.LAP_COUNT[agent] + 1):
-        reward += cfg.GAMMA_DISCOUNT ** env.CURRENT_LAP_STEPS[agent] * cfg.LAP_BONUS
+        base_lap_reward = cfg.LAP_BONUS * 0.5
+
+        speed_bonus = cfg.GAMMA_DISCOUNT ** env.CURRENT_LAP_STEPS[agent] * cfg.LAP_BONUS
+
+        reward += base_lap_reward + (speed_bonus * time_importance)
 
     return reward

@@ -59,16 +59,16 @@ class MARLRacingEnv(ParallelEnv):
         self.VISITED_TILES = {}
         self.CURRENT_LAP_STEPS = {}
 
-    def _spawn_agents(self, agent_container, cars_per_row, lateral_spacing, longitudinal_spacing):
+    def _spawn_agents(self, agent_container, centerline_offset, lateral_offset, orientation_offset):
         """
         Set data of individual agents in dictionaries that hold per-agent data.
         :param agent_container: Data structure which holds a list of agents.
-        :param cars_per_row: Number of cars per row.
-        :param lateral_spacing: Lateral spacing of the agents.
-        :param longitudinal_spacing: Longitudinal spacing of the agents.
+        :param centerline_offset: Centerline offset for agents.
+        :param lateral_offset: Lateral offset for agents.
+        :param orientation_offset: Orientation offset for agents.
         """
         for idx, agent in enumerate(agent_container):
-            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, idx)
+            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, idx, centerline_offset = centerline_offset, lateral_offset = lateral_offset, orientation_offset = orientation_offset)
 
             self.CARS[agent] = Car(
                 self.WORLD,
@@ -293,6 +293,7 @@ class MARLRacingEnv(ParallelEnv):
         self.SCREEN = None
         self.CLOCK = None
         self.STEPS = 0
+        self.CURRICULUM_STEPS = 0
 
         self._reset_per_agent_dictionaries()
         self._set_variables_from_config()
@@ -308,12 +309,14 @@ class MARLRacingEnv(ParallelEnv):
         self._reset_per_agent_dictionaries()
         shuffled_agents = self._shuffle_agent_order()
 
-        # Set random positions for agents on the track (within certain ranges)
-        cars_per_row = int(self.np_random.choice([1, 2], p=[0.9, 0.1]))
-        lateral_spacing = float(self.np_random.uniform(1.0, 3.5))
-        longitudinal_spacing = float(self.np_random.uniform(3.0, 12.0))
+        # Curriculum logic: Difficulty ramps up as training elapses
+        difficulty = min(1.0, self.CURRICULUM_STEPS / 125_000)
 
-        self._spawn_agents(shuffled_agents, cars_per_row, lateral_spacing, longitudinal_spacing)
+        centerline_offset = np.random.uniform(0, 2 * np.pi * self.TRACK_RADIUS)
+        lateral_offset = np.random.uniform(-1.8, 1.8) * difficulty
+        orientation_offset = np.random.uniform(-1.57, 1.57) * difficulty
+
+        self._spawn_agents(shuffled_agents, centerline_offset, lateral_offset, orientation_offset)
 
         observations = self._build_observations(self.agents)
         infos = self._build_infos(self.agents)
@@ -335,6 +338,7 @@ class MARLRacingEnv(ParallelEnv):
 
         for _ in range(self.ACTION_REPEAT):
             self.STEPS += 1
+            self.CURRICULUM_STEPS += 1
 
             self._apply_actions_to_live_agents(live_agents, terminations, truncations, actions, steers, throttles, gases, brakes)
             self.WORLD.Step(self.DT, 6, 2)
