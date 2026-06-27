@@ -20,6 +20,13 @@ class MARLRacingEnv(ParallelEnv):
         "render_fps": 30
     }
 
+    def set_global_step(self, global_step):
+        """
+        Update the internal curriculum counter with the global training step.
+        :param global_step: Global training step.
+        """
+        self.CURRICULUM_STEPS = global_step
+
     def _map_agent_names_and_ids(self, agent_no):
         """
         Create PettingZoo agent names and ID mapping.
@@ -221,6 +228,41 @@ class MARLRacingEnv(ParallelEnv):
 
         return self.LAP_PROGRESS[agent] <= next_lap_target
 
+    def _sample_curriculum_start(self):
+        steps = self.CURRICULUM_STEPS
+
+        if steps < 1_000_000:
+            # Learn basic driving from the normal start.
+            centerline_offset = 0.0
+            lateral_offset = 0.0
+            orientation_offset = 0.0
+
+        elif steps < 2_000_000:
+            # Learn to drive from anywhere on the track, but still aligned.
+            centerline_offset = self.np_random.uniform(0.0, 2 * np.pi * self.TRACK_RADIUS)
+            lateral_offset = 0.0
+            orientation_offset = 0.0
+
+        elif steps < 3_000_000:
+            # Add mild lane variation.
+            centerline_offset = self.np_random.uniform(0.0, 2 * np.pi * self.TRACK_RADIUS)
+            lateral_offset = self.np_random.uniform(-0.5, 0.5)
+            orientation_offset = 0.0
+
+        elif steps < 4_000_000:
+            # Add recovery from small heading errors.
+            centerline_offset = self.np_random.uniform(0.0, 2 * np.pi * self.TRACK_RADIUS)
+            lateral_offset = self.np_random.uniform(-1.0, 1.0)
+            orientation_offset = self.np_random.uniform(-0.25, 0.25)
+
+        else:
+            # Full intended single-agent difficulty.
+            centerline_offset = self.np_random.uniform(0.0, 2 * np.pi * self.TRACK_RADIUS)
+            lateral_offset = self.np_random.uniform(-1.8, 1.8)
+            orientation_offset = self.np_random.uniform(-0.75, 0.75)
+
+        return centerline_offset, lateral_offset, orientation_offset
+
     @staticmethod
     def _terminate_agent(agent, terminations, done_reasons, actual_reason):
         """
@@ -309,13 +351,8 @@ class MARLRacingEnv(ParallelEnv):
         self._reset_per_agent_dictionaries()
         shuffled_agents = self._shuffle_agent_order()
 
-        # Curriculum logic: Difficulty ramps up as training elapses
-        difficulty = min(1.0, self.CURRICULUM_STEPS / 125_000)
-
-        centerline_offset = np.random.uniform(0, 2 * np.pi * self.TRACK_RADIUS)
-        lateral_offset = np.random.uniform(-1.8, 1.8) * difficulty
-        orientation_offset = np.random.uniform(-1.57, 1.57) * difficulty
-
+        # Curriculum logic
+        centerline_offset, lateral_offset, orientation_offset = self._sample_curriculum_start()
         self._spawn_agents(shuffled_agents, centerline_offset, lateral_offset, orientation_offset)
 
         observations = self._build_observations(self.agents)
@@ -338,7 +375,6 @@ class MARLRacingEnv(ParallelEnv):
 
         for _ in range(self.ACTION_REPEAT):
             self.STEPS += 1
-            self.CURRICULUM_STEPS += 1
 
             self._apply_actions_to_live_agents(live_agents, terminations, truncations, actions, steers, throttles, gases, brakes)
             self.WORLD.Step(self.DT, 6, 2)

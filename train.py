@@ -1,4 +1,5 @@
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
+from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from marl_racing_env import marl_racing_environment_v0
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.registry import register_env
@@ -6,6 +7,22 @@ from pathlib import Path
 from ray import tune
 import ray
 import os
+
+class CurriculumCallback(DefaultCallbacks):
+    def on_train_result(self, *, algorithm, result, **kwargs):
+        global_step = result["timesteps_total"]
+
+        try:
+            # Use foreach_env_runner to iterate over all workers
+            algorithm.env_runner_group.foreach_env_runner(
+                lambda worker: worker.foreach_env(
+                    # Use .par_env to access your MARLRacingEnv instance
+                    # inside the ParallelPettingZooEnv wrapper
+                    lambda env: env.par_env.set_global_step(global_step)
+                )
+            )
+        except Exception as e:
+            print(f"Warning: Failed to update curriculum step: {e}")
 
 def get_obs_act_spaces():
     temp_env = marl_racing_environment_v0.parallel_env(render_mode=None)
@@ -35,6 +52,7 @@ def main():
 
     config = (
         PPOConfig()
+        .callbacks(CurriculumCallback)
         .environment(
             env=env_name,
             clip_actions=True,
@@ -61,9 +79,10 @@ def main():
             clip_param=0.2,
             grad_clip=0.5,
             entropy_coeff_schedule=[
-                [0, 0.005],
-                [1_000_000, 0.001],
-                [3_000_000, 0.0],
+                [0, 0.01],
+                [2_000_000, 0.01],
+                [3_500_000, 0.005],
+                [5_000_000, 0.001],
             ],
             model={
                 "free_log_std": True,
@@ -87,11 +106,12 @@ def main():
 
     tune.run(
         "PPO",
-        name="PPO_CURRICULUM_UPDATES_T1",
-        stop={"timesteps_total": 3_000_000 if not os.environ.get("CI") else 50000},
+        name="JUST_LAP_T2",
+        stop={"timesteps_total": 5_000_000 if not os.environ.get("CI") else 50000},
         checkpoint_freq=10,
         storage_path=storage_uri,
         config=config.to_dict(),
+        resume=True,
     )
 
     ray.shutdown()

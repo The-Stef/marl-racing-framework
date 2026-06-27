@@ -38,14 +38,16 @@ def current_tile_lane(env, agent):
 
 def compute_desired_direction(env, agent):
     """Return the tangent direction angle the current car should follow."""
+    # Position relative to center
     rx = env.CARS[agent].hull.position[0] - env.TRACK_CENTER_X
     ry = env.CARS[agent].hull.position[1] - env.TRACK_CENTER_Y
 
-    # Clockwise tangent, center-to-car position rotated by 90 degrees to right
-    tx = ry
-    ty = -rx
+    # Calculate theta (position angle)
+    theta = np.arctan2(ry, rx)
 
-    return np.arctan2(ty, tx)
+    # The tangent for a clockwise progression should be theta - pi/2
+    # This matches the agent_orientation calculation in compute_car_start_pose
+    return wrap_angle(theta - np.pi / 2)
 
 def compute_radial_error(env, agent):
     """Compute signed distance from the ideal circular centerline."""
