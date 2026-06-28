@@ -67,35 +67,52 @@ class MARLRacingEnv(ParallelEnv):
         self.CURRENT_LAP_STEPS = {}
 
     def _spawn_agents(self, agent_container, centerline_offset, lateral_offset, orientation_offset):
-        """
-        Set data of individual agents in dictionaries that hold per-agent data.
-        :param agent_container: Data structure which holds a list of agents.
-        :param centerline_offset: Centerline offset for agents.
-        :param lateral_offset: Lateral offset for agents.
-        :param orientation_offset: Orientation offset for agents.
-        """
         for idx, agent in enumerate(agent_container):
-            car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(self, agent, idx, centerline_offset = centerline_offset, lateral_offset = lateral_offset, orientation_offset = orientation_offset)
-
-            self.CARS[agent] = Car(
-                self.WORLD,
-                car_start_direction,
-                car_start_position_x,
-                car_start_position_y,
-            )
-            self.CARS[agent].hull.userData['agent'] = agent
-
-            # Set up each prev_theta
-            self.PREV_THETA[agent] = np.arctan2(
-                self.CARS[agent].hull.position[1] - self.TRACK_CENTER_Y,
-                self.CARS[agent].hull.position[0] - self.TRACK_CENTER_X,
+            self._spawn_agent_at(
+                agent,
+                idx,
+                centerline_offset,
+                lateral_offset,
+                orientation_offset,
             )
 
-            self.LAP_PROGRESS[agent] = np.float32(0.0)
-            self.LAST_D_THETA[agent] = np.float32(0.0)
-            self.LAP_COUNT[agent] = 0
-            self.CURRENT_LAP_STEPS[agent] = 0
-            self.VISITED_TILES[agent] = {current_tile_lane(self, agent)}
+    def _spawn_agent_at(
+            self,
+            agent,
+            idx,
+            centerline_offset,
+            lateral_offset,
+            orientation_offset,
+            lateral_spacing=2.25,
+    ):
+        car_start_position_x, car_start_position_y, car_start_direction = compute_car_start_pose(
+            self,
+            agent,
+            idx,
+            centerline_offset=centerline_offset,
+            lateral_offset=lateral_offset,
+            lateral_spacing=lateral_spacing,
+            orientation_offset=orientation_offset,
+        )
+
+        self.CARS[agent] = Car(
+            self.WORLD,
+            car_start_direction,
+            car_start_position_x,
+            car_start_position_y,
+        )
+        self.CARS[agent].hull.userData["agent"] = agent
+
+        self.PREV_THETA[agent] = np.arctan2(
+            self.CARS[agent].hull.position[1] - self.TRACK_CENTER_Y,
+            self.CARS[agent].hull.position[0] - self.TRACK_CENTER_X,
+        )
+
+        self.LAP_PROGRESS[agent] = np.float32(0.0)
+        self.LAST_D_THETA[agent] = np.float32(0.0)
+        self.LAP_COUNT[agent] = 0
+        self.CURRENT_LAP_STEPS[agent] = 0
+        self.VISITED_TILES[agent] = {current_tile_lane(self, agent)}
 
     def _set_variables_from_config(self):
         """Initialize variables with values from a config file."""
@@ -263,6 +280,100 @@ class MARLRacingEnv(ParallelEnv):
 
         return centerline_offset, lateral_offset, orientation_offset
 
+    def _sample_two_agent_curriculum_starts(self):
+        steps = max(
+            0,
+            self.CURRICULUM_STEPS - cfg.TWO_AGENT_CURRICULUM_OFFSET
+        )
+
+        circumference = 2 * np.pi * self.TRACK_RADIUS
+
+        # Defaults: fixed side-by-side normal start.
+        shared_centerline_offset = 0.0
+        lane_swap = False
+        learner_longitudinal_offset = 0.0
+        fixed_orientation_offset = 0.0
+        learner_orientation_offset = 0.0
+
+        if steps < cfg.TWO_AGENT_STAGE_1_END:
+            # Stage 1: fixed safe side-by-side start.
+            pass
+
+        elif steps < cfg.TWO_AGENT_STAGE_2_END:
+            # Stage 2: shared random position along track.
+            shared_centerline_offset = self.np_random.uniform(0.0, circumference)
+
+        elif steps < cfg.TWO_AGENT_STAGE_3_END:
+            # Stage 3: shared random position + lane swap.
+            shared_centerline_offset = self.np_random.uniform(0.0, circumference)
+            lane_swap = bool(self.np_random.random() < 0.5)
+
+        elif steps < cfg.TWO_AGENT_STAGE_4_END:
+            # Stage 4: add learner ahead/behind variation.
+            shared_centerline_offset = self.np_random.uniform(0.0, circumference)
+            lane_swap = bool(self.np_random.random() < 0.5)
+            learner_longitudinal_offset = self.np_random.uniform(
+                -cfg.TWO_AGENT_LONGITUDINAL_SMALL,
+                cfg.TWO_AGENT_LONGITUDINAL_SMALL,
+            )
+
+        else:
+            # Stage 5: wider learner interaction variation.
+            shared_centerline_offset = self.np_random.uniform(0.0, circumference)
+            lane_swap = bool(self.np_random.random() < 0.5)
+            learner_longitudinal_offset = self.np_random.uniform(
+                -cfg.TWO_AGENT_LONGITUDINAL_WIDE,
+                cfg.TWO_AGENT_LONGITUDINAL_WIDE,
+            )
+            learner_orientation_offset = self.np_random.uniform(
+                -cfg.TWO_AGENT_ORIENTATION_WIDE,
+                cfg.TWO_AGENT_ORIENTATION_WIDE,
+            )
+
+        if lane_swap:
+            fixed_lateral_offset = cfg.TWO_AGENT_LANE_OFFSET
+            learner_lateral_offset = -cfg.TWO_AGENT_LANE_OFFSET
+        else:
+            fixed_lateral_offset = -cfg.TWO_AGENT_LANE_OFFSET
+            learner_lateral_offset = cfg.TWO_AGENT_LANE_OFFSET
+
+        return {
+            "car_0": {
+                "centerline_offset": shared_centerline_offset % circumference,
+                "lateral_offset": fixed_lateral_offset,
+                "orientation_offset": fixed_orientation_offset,
+            },
+            "car_1": {
+                "centerline_offset": (
+                                             shared_centerline_offset + learner_longitudinal_offset
+                                     ) % circumference,
+                "lateral_offset": learner_lateral_offset,
+                "orientation_offset": learner_orientation_offset,
+            },
+        }
+
+    def _apply_relative_progress_bonus(self, rewards, terminations, truncations):
+        learner = "car_1"
+        fixed = "car_0"
+
+        if learner not in rewards:
+            return
+
+        learner_done = terminations.get(learner, False) or truncations.get(learner, False)
+
+        if not learner_done:
+            return
+
+        learner_progress = -self.LAP_PROGRESS.get(learner, 0.0)
+        fixed_progress = -self.LAP_PROGRESS.get(fixed, 0.0)
+
+        relative_laps = (learner_progress - fixed_progress) / (2 * np.pi)
+        relative_bonus = np.clip(relative_laps, -1.0, 1.0) * cfg.RELATIVE_PROGRESS_BONUS
+
+        rewards[learner] += float(relative_bonus)
+
+    # WHERE DOES THIS GO? self._apply_relative_progress_bonus(rewards, terminations, truncations)
+
     @staticmethod
     def _terminate_agent(agent, terminations, done_reasons, actual_reason):
         """
@@ -349,11 +460,26 @@ class MARLRacingEnv(ParallelEnv):
         self.WORLD = Box2D.b2World((0, 0))
 
         self._reset_per_agent_dictionaries()
-        shuffled_agents = self._shuffle_agent_order()
 
         # Curriculum logic
-        centerline_offset, lateral_offset, orientation_offset = self._sample_curriculum_start()
-        self._spawn_agents(shuffled_agents, centerline_offset, lateral_offset, orientation_offset)
+        if self.NUM_AGENTS == 2:
+            start_specs = self._sample_two_agent_curriculum_starts()
+
+            for idx, agent in enumerate(self.agents):
+                spec = start_specs[agent]
+
+                self._spawn_agent_at(
+                    agent=agent,
+                    idx=idx,
+                    centerline_offset=spec["centerline_offset"],
+                    lateral_offset=spec["lateral_offset"],
+                    orientation_offset=spec["orientation_offset"],
+                    lateral_spacing=0.0
+                )
+        else:
+            shuffled_agents = self._shuffle_agent_order()
+            centerline_offset, lateral_offset, orientation_offset = self._sample_curriculum_start()
+            self._spawn_agents(shuffled_agents, centerline_offset, lateral_offset, orientation_offset)
 
         observations = self._build_observations(self.agents)
         infos = self._build_infos(self.agents)
@@ -419,6 +545,9 @@ class MARLRacingEnv(ParallelEnv):
 
             if self.render_mode == "human":
                 self.render()
+
+        if self.NUM_AGENTS == 2:
+            self._apply_relative_progress_bonus(rewards, terminations, truncations)
 
         observations = self._build_observations(live_agents)
         infos = self._build_infos(

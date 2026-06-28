@@ -49,9 +49,11 @@ def main():
         for agent in env.agents:
             obs = observations[agent]
 
+            policy_id = "fixed_policy" if agent == "car_0" else "learning_policy"
+
             action = algo.compute_single_action(
                 obs,
-                policy_id="shared_policy",
+                policy_id=policy_id,
                 explore=False,
             )
 
@@ -60,6 +62,7 @@ def main():
 
             actions[agent] = action
 
+            print(agent, policy_id, action)
         observations, rewards, terminations, truncations, infos = env.step(actions)
 
         for agent, reward in rewards.items():
