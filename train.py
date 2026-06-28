@@ -114,6 +114,25 @@ def main():
         resume=True,
     )
 
+    # Used to fine-tune from some checkpoint
+    # CHECKPOINT_111 = r"C:\Users\dusno\Desktop\marl-racing-framework\artifacts\ray_results\marl_racing_environment_v0\JUST_LAP_T2\PPO_marl_racing_environment_v0_8265b_00000_0_2026-06-27_17-40-22\checkpoint_000111"
+    #
+    # tune.run(
+    #     "PPO",
+    #     name="JUST_LAP_FINETUNE_1M",
+    #     stop={
+    #         # IMPORTANT: this is total timesteps after restoring,
+    #         # not additional timesteps.
+    #         "timesteps_total": 5_550_000 if not os.environ.get("CI") else 50000
+    #     },
+    #     checkpoint_freq=10,
+    #     checkpoint_at_end=True,
+    #     storage_path=storage_uri,
+    #     config=config.to_dict(),
+    #     restore=CHECKPOINT_111,
+    #     resume=False,
+    # )
+
     ray.shutdown()
 
 if __name__ == "__main__":

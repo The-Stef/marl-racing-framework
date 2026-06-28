@@ -417,6 +417,9 @@ class MARLRacingEnv(ParallelEnv):
             if all(terminations[a] or truncations[a] for a in live_agents):
                 break
 
+            if self.render_mode == "human":
+                self.render()
+
         observations = self._build_observations(live_agents)
         infos = self._build_infos(
             live_agents,
@@ -444,9 +447,6 @@ class MARLRacingEnv(ParallelEnv):
         ]
 
         self.state = observations
-
-        if self.render_mode == "human":
-            self.render()
 
         return observations, rewards, terminations, truncations, infos
 
