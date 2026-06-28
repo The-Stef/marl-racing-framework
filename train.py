@@ -88,9 +88,9 @@ def main():
             grad_clip=0.5,
             entropy_coeff_schedule=[
                 [0, 0.005],
-                [300_000, 0.005],
-                [700_000, 0.001],
-                [1_000_000, 0.0005],
+                [1_000_000, 0.005],
+                [3_000_000, 0.001],
+                [5_000_000, 0.0003],
             ],
             model={
                 "free_log_std": True,
@@ -124,7 +124,7 @@ def main():
 
     CHECKPOINT_111 = r"C:\Users\dusno\Desktop\marl-racing-framework\artifacts\ray_results\marl_racing_environment_v0\JUST_LAP_T2\PPO_marl_racing_environment_v0_8265b_00000_0_2026-06-27_17-40-22\checkpoint_000111"
 
-    SAVE_DIR = PROJECT_ROOT / "artifacts" / "manual_checkpoints" / "fixed_111_vs_learner"
+    SAVE_DIR = PROJECT_ROOT / "artifacts" / "manual_checkpoints" / "fixed_111_vs_learner_5M"
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
     algo = config.build()
@@ -137,8 +137,8 @@ def main():
 
     old_algo.stop()
 
-    target_timesteps = 1_000_000
-    save_every = 10
+    target_timesteps = 5_000_000
+    save_every = 25  # about every 100k steps if each iter is ~4096
 
     for i in range(10_000):
         result = algo.train()

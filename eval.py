@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 import ray
 import os
+import re
 
 ENV_NAME = "marl_racing_environment_v0"
 
@@ -35,6 +36,11 @@ def main():
     algo = PPO.from_checkpoint(checkpoint_path)
 
     env = marl_racing_environment_v0.parallel_env(render_mode="human")
+    m = re.search(r"_steps_(\d+)", checkpoint_path)
+    if m:
+        eval_step = int(m.group(1))
+        env.set_global_step(eval_step)
+        print("eval curriculum step:", eval_step)
 
     observations, infos = env.reset(seed=42)
 
